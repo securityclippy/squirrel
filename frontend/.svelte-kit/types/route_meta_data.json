@@ -1,0 +1,12 @@
+{
+	"/": [],
+	"/reminders": [
+		"src/routes/reminders/+page.server.ts"
+	],
+	"/reminders/new": [
+		"src/routes/reminders/new/+page.server.ts"
+	],
+	"/reminders/[reminder_id]/edit": [
+		"src/routes/reminders/[reminder_id]/edit/+page.server.ts"
+	]
+}

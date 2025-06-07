@@ -1,0 +1,1 @@
+export { default as component } from "../../../../src/routes/reminders/[reminder_id]/edit/+page.svelte";

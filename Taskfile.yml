@@ -1,0 +1,80 @@
+version: '3'
+
+vars:
+  DATABASE_URL: postgres://user:password@localhost:5432/reminder_service?sslmode=disable
+
+tasks:
+  default:
+    desc: Show available tasks
+    cmd: task --list
+
+  dev:
+    desc: Start development environment
+    cmd: docker-compose up --build
+
+  dev:down:
+    desc: Stop development environment
+    cmd: docker-compose down
+
+  build:
+    desc: Build the Go application
+    cmd: go build -o bin/server cmd/server/main.go
+
+  migrate:up:
+    desc: Run database migrations
+    cmd: goose -dir migrations postgres "{{.DATABASE_URL}}" up
+
+  migrate:down:
+    desc: Rollback database migrations
+    cmd: goose -dir migrations postgres "{{.DATABASE_URL}}" down
+
+  migrate:status:
+    desc: Check migration status
+    cmd: goose -dir migrations postgres "{{.DATABASE_URL}}" status
+
+  test:
+    desc: Run tests
+    cmd: go test ./...
+
+  test:verbose:
+    desc: Run tests with verbose output
+    cmd: go test -v ./...
+
+  clean:
+    desc: Clean build artifacts
+    cmd: rm -rf bin/
+
+  mod:tidy:
+    desc: Clean up Go modules
+    cmd: go mod tidy
+
+  mod:download:
+    desc: Download Go modules
+    cmd: go mod download
+
+  frontend:dev:
+    desc: Start frontend development server
+    dir: frontend
+    cmd: npm run dev
+
+  frontend:build:
+    desc: Build frontend for production
+    dir: frontend
+    cmd: npm run build
+
+  frontend:install:
+    desc: Install frontend dependencies
+    dir: frontend
+    cmd: npm install
+
+  deps:
+    desc: Install all dependencies
+    deps:
+      - mod:download
+      - frontend:install
+
+  setup:
+    desc: Initial project setup
+    cmds:
+      - task: deps
+      - task: migrate:up
