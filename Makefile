@@ -9,7 +9,7 @@ help:
 	@echo "  test         - Run tests"
 
 dev:
-	docker-compose up --build
+	docker-compose up --build -d
 
 build:
 	go build -o bin/server cmd/server/main.go

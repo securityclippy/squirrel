@@ -10,7 +10,7 @@ tasks:
 
   dev:
     desc: Start development environment
-    cmd: docker-compose up --build
+    cmd: docker-compose up --build -d
 
   dev:down:
     desc: Stop development environment
