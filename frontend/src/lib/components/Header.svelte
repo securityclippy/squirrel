@@ -1,7 +1,12 @@
 <header class="top-bar">
-	<div class="logo-section">
-		<div class="squirrel-logo">🐿️</div>
-		<h1>Squirrel Reminders</h1>
+	<div class="header-content">
+		<div class="title-section">
+			<p class="flavor-text">reminders for people who are easily distracted by...</p>
+		</div>
+		<div class="logo-section">
+			<div class="squirrel-logo">🐿️</div>
+			<div class="exclamation">!</div>
+		</div>
 	</div>
 </header>
 
@@ -14,14 +19,41 @@
 		z-index: 10;
 	}
 
+	.header-content {
+		display: flex;
+		justify-content: space-between;
+		align-items: center;
+	}
+
+	.title-section {
+		display: flex;
+		flex-direction: column;
+		gap: 0.25rem;
+	}
+
 	.logo-section {
 		display: flex;
 		align-items: center;
-		gap: 1rem;
+		gap: 0.5rem;
+	}
+
+	.flavor-text {
+		margin: 0;
+		font-size: 1.25rem;
+		color: black;
+		font-style: italic;
 	}
 
 	.squirrel-logo {
-		font-size: 2rem;
+		font-size: 3rem;
+		animation: bounce 2s infinite;
+	}
+
+	.exclamation {
+		font-size: 3rem;
+		font-weight: bold;
+		color: #3b82f6;
+		text-shadow: 0 0 10px #3b82f6, 0 0 20px #3b82f6, 0 0 30px #3b82f6;
 		animation: bounce 2s infinite;
 	}
 
@@ -30,9 +62,26 @@
 		50% { transform: translateY(-5px); }
 	}
 
-	.top-bar h1 {
-		margin: 0;
-		font-size: 1.5rem;
-		font-weight: 600;
+	@keyframes pulse {
+		0%, 100% { transform: scale(1); }
+		50% { transform: scale(1.2); }
+	}
+
+	@media (max-width: 768px) {
+		.top-bar {
+			padding: 1rem;
+		}
+		
+		.flavor-text {
+			font-size: 1rem;
+		}
+		
+		.squirrel-logo {
+			font-size: 2.5rem;
+		}
+
+		.exclamation {
+			font-size: 2.5rem;
+		}
 	}
 </style>
