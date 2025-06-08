@@ -20,7 +20,9 @@
 		delivery_window_minutes: data.reminder.delivery_window_minutes,
 		delivery_method: data.reminder.delivery_method,
 		delivery_address: data.reminder.delivery_address,
-		is_active: data.reminder.is_active
+		is_active: data.reminder.is_active,
+		is_persistent: data.reminder.is_persistent,
+		reminder_interval_minutes: data.reminder.reminder_interval_minutes || 30
 	};
 	
 	// Extract reminder type for reactivity
@@ -49,6 +51,7 @@
 
 	// Reactive field visibility based on reminder type
 	$: isOneTime = reminderType === 'one-time';
+	$: isRecurring = reminderType === 'recurring';
 	
 	// Helper function to check if notification channel is selected
 	function isChannelSelected(channel) {
@@ -109,8 +112,9 @@
 				<label for="reminder_type">Reminder Type *</label>
 				<select id="reminder_type" name="reminder_type" value={formData.reminder_type}>
 					<option value="one-time">One-time</option>
-					<option value="persistent">Recurring</option>
+					<option value="recurring">Recurring</option>
 				</select>
+				<small>One-time reminders fire once, recurring reminders repeat on schedule</small>
 			</div>
 		</div>
 
@@ -129,7 +133,7 @@
 				</div>
 				<!-- Hidden input to provide default scheduled_time for one-time reminders -->
 				<input type="hidden" name="scheduled_time" value="00:00" />
-			{:else}
+			{:else if isRecurring}
 				<div class="form-group">
 					<label for="scheduled_time">Time *</label>
 					<input
@@ -241,6 +245,41 @@
 					required
 				/>
 			</div>
+		</div>
+
+		<div class="form-section">
+			<h2>Persistence Settings</h2>
+			
+			<div class="form-group">
+				<label class="checkbox-label">
+					<input
+						type="checkbox"
+						name="is_persistent"
+						bind:checked={formData.is_persistent}
+					/>
+					<span class="checkmark"></span>
+					<div class="checkbox-content">
+						<strong>Require acknowledgment</strong>
+						<small>Keep reminding until you acknowledge the reminder</small>
+					</div>
+				</label>
+			</div>
+
+			{#if formData.is_persistent}
+				<div class="form-group">
+					<label for="reminder_interval">Re-reminder Interval (minutes)</label>
+					<input
+						id="reminder_interval"
+						name="reminder_interval_minutes"
+						type="number"
+						bind:value={formData.reminder_interval_minutes}
+						min="5"
+						max="1440"
+						step="5"
+					/>
+					<small>How often to remind you again if not acknowledged (5-1440 minutes)</small>
+				</div>
+			{/if}
 		</div>
 
 		<div class="form-section">
@@ -466,6 +505,21 @@
 	.checkbox-label:hover {
 		background: #f9fafb;
 		border-color: #d1d5db;
+	}
+
+	.checkbox-content {
+		flex: 1;
+	}
+
+	.checkbox-content strong {
+		display: block;
+		color: #374151;
+		margin-bottom: 0.25rem;
+	}
+
+	.checkbox-content small {
+		color: #6b7280;
+		font-size: 0.875rem;
 	}
 
 	.form-actions {

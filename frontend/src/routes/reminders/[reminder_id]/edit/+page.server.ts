@@ -31,7 +31,7 @@ export const actions: Actions = {
 		// Initialize variables to ensure they're available in catch block
 		let title = '';
 		let description = '';
-		let reminderType: 'one-time' | 'persistent' = 'one-time';
+		let reminderType: 'one-time' | 'recurring' = 'one-time';
 		let scheduledAt = '';
 		let scheduledTime = '09:00';
 		let deliveryWindowMinutes = 15;
@@ -40,6 +40,8 @@ export const actions: Actions = {
 		let isActive = true;
 		let notificationChannels: string[] = [];
 		let scheduledDaysOfWeek: number[] = [];
+		let isPersistent = false;
+		let reminderIntervalMinutes: number | undefined;
 
 		try {
 			const reminderId = parseInt(params.reminder_id);
@@ -53,13 +55,16 @@ export const actions: Actions = {
 			// Extract form data
 			title = data.get('title') as string;
 			description = data.get('description') as string;
-			reminderType = data.get('reminder_type') as 'one-time' | 'persistent';
+			reminderType = data.get('reminder_type') as 'one-time' | 'recurring';
 			scheduledAt = data.get('scheduled_at') as string;
 			scheduledTime = data.get('scheduled_time') as string;
 			deliveryWindowMinutes = parseInt(data.get('delivery_window_minutes') as string) || 15;
 			deliveryMethod = data.get('delivery_method') as string;
 			deliveryAddress = data.get('delivery_address') as string;
 			isActive = data.get('is_active') === 'on';
+			isPersistent = data.get('is_persistent') === 'on';
+			const intervalStr = data.get('reminder_interval_minutes') as string;
+			reminderIntervalMinutes = intervalStr ? parseInt(intervalStr) : undefined;
 			
 			// Parse notification channels
 			notificationChannels = [];
@@ -67,9 +72,9 @@ export const actions: Actions = {
 			if (data.get('notification_channels_sms')) notificationChannels.push('sms');
 			if (data.get('notification_channels_call')) notificationChannels.push('call');
 			
-			// Parse scheduled days of week for persistent reminders
+			// Parse scheduled days of week for recurring reminders
 			scheduledDaysOfWeek = [];
-			if (reminderType === 'persistent') {
+			if (reminderType === 'recurring') {
 				for (let i = 0; i < 7; i++) {
 					if (data.get(`scheduled_days_of_week_${i}`)) {
 						scheduledDaysOfWeek.push(i);
@@ -89,7 +94,9 @@ export const actions: Actions = {
 				delivery_window_minutes: deliveryWindowMinutes || 15,
 				delivery_method: deliveryMethod || 'email',
 				delivery_address: deliveryAddress || '',
-				is_active: isActive
+				is_active: isActive,
+				is_persistent: isPersistent,
+				reminder_interval_minutes: reminderIntervalMinutes || 30
 			};
 			
 			// Validation
@@ -101,8 +108,8 @@ export const actions: Actions = {
 				return { error: 'Scheduled date/time is required for one-time reminders', data: formData };
 			}
 			
-			if (reminderType === 'persistent' && scheduledDaysOfWeek.length === 0) {
-				return { error: 'Please select at least one day of the week for persistent reminders', data: formData };
+			if (reminderType === 'recurring' && scheduledDaysOfWeek.length === 0) {
+				return { error: 'Please select at least one day of the week for recurring reminders', data: formData };
 			}
 			
 			if (notificationChannels.length === 0) {
@@ -116,8 +123,8 @@ export const actions: Actions = {
 			// Prepare the data for submission
 			let finalScheduledAt = scheduledAt;
 			
-			// For persistent reminders, set scheduled_at if needed
-			if (reminderType === 'persistent' && scheduledTime) {
+			// For recurring reminders, set scheduled_at if needed
+			if (reminderType === 'recurring' && scheduledTime) {
 				const today = new Date();
 				const [hours, minutes] = scheduledTime.split(':');
 				today.setHours(parseInt(hours), parseInt(minutes), 0, 0);
@@ -129,13 +136,15 @@ export const actions: Actions = {
 				description: description?.trim() || undefined,
 				reminder_type: reminderType,
 				scheduled_at: finalScheduledAt,
-				scheduled_time: reminderType === 'persistent' ? scheduledTime : '00:00',
+				scheduled_time: reminderType === 'recurring' ? scheduledTime : '00:00',
 				scheduled_days_of_week: scheduledDaysOfWeek.length > 0 ? scheduledDaysOfWeek : null,
 				notification_channels: notificationChannels,
 				delivery_window_minutes: deliveryWindowMinutes,
 				delivery_method: deliveryMethod,
 				delivery_address: deliveryAddress.trim(),
-				is_active: isActive
+				is_active: isActive,
+				is_persistent: isPersistent,
+				reminder_interval_minutes: isPersistent ? reminderIntervalMinutes : undefined
 			};
 			
 			console.log('Server: Updating reminder', reminderId, 'with data:', updateData);
@@ -163,7 +172,9 @@ export const actions: Actions = {
 				delivery_window_minutes: deliveryWindowMinutes || 15,
 				delivery_method: deliveryMethod || 'email',
 				delivery_address: deliveryAddress || '',
-				is_active: isActive
+				is_active: isActive,
+				is_persistent: isPersistent,
+				reminder_interval_minutes: reminderIntervalMinutes || 30
 			};
 			
 			return { 
