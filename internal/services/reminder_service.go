@@ -62,10 +62,15 @@ func (s *ReminderService) CreateReminder(ctx context.Context, userID string, req
 		DeliveryMethod:        req.DeliveryMethod,
 		DeliveryAddress:       req.DeliveryAddress,
 		IsActive:              true,
+		IsPersistent:          req.IsPersistent,
+		ReminderIntervalMinutes: pgtype.Int4{Valid: req.ReminderIntervalMinutes != nil},
 	}
 
 	if req.Description != nil {
 		params.Description = pgtype.Text{String: *req.Description, Valid: true}
+	}
+	if req.ReminderIntervalMinutes != nil {
+		params.ReminderIntervalMinutes = pgtype.Int4{Int32: int32(*req.ReminderIntervalMinutes), Valid: true}
 	}
 
 	reminder, err := s.queries.CreateReminder(ctx, params)
@@ -125,6 +130,8 @@ func (s *ReminderService) UpdateReminder(ctx context.Context, id int32, req *mod
 		DeliveryMethod:        current.DeliveryMethod,
 		DeliveryAddress:       current.DeliveryAddress,
 		IsActive:              current.IsActive,
+		IsPersistent:          current.IsPersistent,
+		ReminderIntervalMinutes: current.ReminderIntervalMinutes,
 	}
 
 	// Update only provided fields
@@ -173,6 +180,12 @@ func (s *ReminderService) UpdateReminder(ctx context.Context, id int32, req *mod
 	if req.IsActive != nil {
 		params.IsActive = *req.IsActive
 	}
+	if req.IsPersistent != nil {
+		params.IsPersistent = *req.IsPersistent
+	}
+	if req.ReminderIntervalMinutes != nil {
+		params.ReminderIntervalMinutes = pgtype.Int4{Int32: int32(*req.ReminderIntervalMinutes), Valid: true}
+	}
 
 	reminder, err := s.queries.UpdateReminder(ctx, params)
 	if err != nil {
@@ -215,6 +228,7 @@ func (s *ReminderService) convertDBReminderToModel(dbReminder *db.Reminder) *mod
 		DeliveryAddress:       dbReminder.DeliveryAddress,
 		Status:                dbReminder.Status,
 		IsActive:              dbReminder.IsActive,
+		IsPersistent:          dbReminder.IsPersistent,
 	}
 
 	// Handle nullable description
@@ -261,5 +275,65 @@ func (s *ReminderService) convertDBReminderToModel(dbReminder *db.Reminder) *mod
 		}
 	}
 
+	// Handle acknowledged_at
+	if dbReminder.AcknowledgedAt.Valid {
+		reminder.AcknowledgedAt = &dbReminder.AcknowledgedAt.Time
+	}
+
+	// Handle reminder_interval_minutes
+	if dbReminder.ReminderIntervalMinutes.Valid {
+		intervalMinutes := int(dbReminder.ReminderIntervalMinutes.Int32)
+		reminder.ReminderIntervalMinutes = &intervalMinutes
+	}
+
+	// Handle last_reminded_at
+	if dbReminder.LastRemindedAt.Valid {
+		reminder.LastRemindedAt = &dbReminder.LastRemindedAt.Time
+	}
+
 	return reminder
+}
+
+func (s *ReminderService) AcknowledgeReminder(ctx context.Context, id int32) error {
+	err := s.queries.AcknowledgeReminder(ctx, id)
+	if err != nil {
+		return fmt.Errorf("failed to acknowledge reminder: %w", err)
+	}
+	return nil
+}
+
+func (s *ReminderService) UpdateLastRemindedAt(ctx context.Context, id int32) error {
+	err := s.queries.UpdateLastRemindedAt(ctx, id)
+	if err != nil {
+		return fmt.Errorf("failed to update last reminded at: %w", err)
+	}
+	return nil
+}
+
+func (s *ReminderService) GetUnacknowledgedPersistentReminders(ctx context.Context) ([]models.Reminder, error) {
+	dbReminders, err := s.queries.GetUnacknowledgedPersistentReminders(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get unacknowledged persistent reminders: %w", err)
+	}
+
+	reminders := make([]models.Reminder, len(dbReminders))
+	for i, dbReminder := range dbReminders {
+		reminders[i] = *s.convertDBReminderToModel(&dbReminder)
+	}
+
+	return reminders, nil
+}
+
+func (s *ReminderService) GetPendingRecurringReminders(ctx context.Context) ([]models.Reminder, error) {
+	dbReminders, err := s.queries.GetPendingRecurringReminders(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get pending recurring reminders: %w", err)
+	}
+
+	reminders := make([]models.Reminder, len(dbReminders))
+	for i, dbReminder := range dbReminders {
+		reminders[i] = *s.convertDBReminderToModel(&dbReminder)
+	}
+
+	return reminders, nil
 }

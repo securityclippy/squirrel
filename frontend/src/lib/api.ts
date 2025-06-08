@@ -33,7 +33,7 @@ export interface Reminder {
 	title: string;
 	description?: string;
 	scheduled_at: string;
-	reminder_type: 'one-time' | 'persistent';
+	reminder_type: 'one-time' | 'persistent' | 'recurring';
 	notification_channels: string[];
 	scheduled_time: string;
 	scheduled_days_of_week?: number[];
@@ -42,6 +42,10 @@ export interface Reminder {
 	delivery_address: string;
 	status: string;
 	is_active: boolean;
+	is_persistent: boolean;
+	acknowledged_at?: string;
+	reminder_interval_minutes?: number;
+	last_reminded_at?: string;
 	created_at: string;
 	updated_at: string;
 }
@@ -50,20 +54,22 @@ export interface CreateReminderRequest {
 	title: string;
 	description?: string;
 	scheduled_at: string;
-	reminder_type: 'one-time' | 'persistent';
+	reminder_type: 'one-time' | 'persistent' | 'recurring';
 	notification_channels: string[];
 	scheduled_time: string;
 	scheduled_days_of_week?: number[];
 	delivery_window_minutes: number;
 	delivery_method: string;
 	delivery_address: string;
+	is_persistent: boolean;
+	reminder_interval_minutes?: number;
 }
 
 export interface UpdateReminderRequest {
 	title?: string;
 	description?: string;
 	scheduled_at?: string;
-	reminder_type?: 'one-time' | 'persistent';
+	reminder_type?: 'one-time' | 'persistent' | 'recurring';
 	notification_channels?: string[];
 	scheduled_time?: string;
 	scheduled_days_of_week?: number[];
@@ -71,6 +77,8 @@ export interface UpdateReminderRequest {
 	delivery_method?: string;
 	delivery_address?: string;
 	is_active?: boolean;
+	is_persistent?: boolean;
+	reminder_interval_minutes?: number;
 }
 
 class ApiError extends Error {
@@ -140,6 +148,13 @@ export const api = {
 	async deleteReminder(id: number): Promise<void> {
 		const response = await fetch(`${API_BASE}/reminders/${id}`, {
 			method: 'DELETE',
+		});
+		return handleResponse(response);
+	},
+
+	async acknowledgeReminder(id: number): Promise<void> {
+		const response = await fetch(`${API_BASE}/reminders/${id}/acknowledge`, {
+			method: 'POST',
 		});
 		return handleResponse(response);
 	},

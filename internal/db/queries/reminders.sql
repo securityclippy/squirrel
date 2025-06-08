@@ -2,9 +2,10 @@
 INSERT INTO reminders (
     user_id, title, description, scheduled_at, reminder_type, 
     notification_channels, scheduled_time, scheduled_days_of_week, 
-    delivery_window_minutes, delivery_method, delivery_address, is_active
+    delivery_window_minutes, delivery_method, delivery_address, is_active,
+    is_persistent, reminder_interval_minutes
 ) VALUES (
-    $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12
+    $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14
 ) RETURNING *;
 
 -- name: GetReminder :one
@@ -40,6 +41,8 @@ UPDATE reminders SET
     delivery_method = COALESCE($10, delivery_method),
     delivery_address = COALESCE($11, delivery_address),
     is_active = COALESCE($12, is_active),
+    is_persistent = COALESCE($13, is_persistent),
+    reminder_interval_minutes = COALESCE($14, reminder_interval_minutes),
     updated_at = NOW()
 WHERE id = $1 RETURNING *;
 
@@ -57,9 +60,42 @@ WHERE id = $1;
 
 -- name: GetRecurringReminders :many
 SELECT * FROM reminders 
-WHERE reminder_type = 'persistent'
+WHERE reminder_type IN ('persistent', 'recurring')
   AND is_active = true
   AND (
     EXTRACT(DOW FROM NOW()) = ANY(scheduled_days_of_week)
     OR scheduled_days_of_week IS NULL
+  );
+
+-- name: AcknowledgeReminder :exec
+UPDATE reminders SET 
+    acknowledged_at = NOW(),
+    updated_at = NOW()
+WHERE id = $1;
+
+-- name: UpdateLastRemindedAt :exec
+UPDATE reminders SET 
+    last_reminded_at = NOW(),
+    updated_at = NOW()
+WHERE id = $1;
+
+-- name: GetUnacknowledgedPersistentReminders :many
+SELECT * FROM reminders 
+WHERE is_persistent = true 
+  AND is_active = true
+  AND acknowledged_at IS NULL
+  AND (
+    last_reminded_at IS NULL 
+    OR last_reminded_at < NOW() - INTERVAL '1 minute' * reminder_interval_minutes
+  );
+
+-- name: GetPendingRecurringReminders :many
+SELECT * FROM reminders 
+WHERE reminder_type = 'recurring'
+  AND is_active = true
+  AND status = 'pending'
+  AND scheduled_time <= NOW()::time
+  AND (
+    scheduled_days_of_week IS NULL
+    OR EXTRACT(DOW FROM NOW()) = ANY(scheduled_days_of_week)
   );

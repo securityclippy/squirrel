@@ -33,4 +33,8 @@ type Reminder struct {
 	ScheduledDaysOfWeek   []int32            `json:"scheduled_days_of_week"`
 	DeliveryWindowMinutes int32              `json:"delivery_window_minutes"`
 	IsActive              bool               `json:"is_active"`
+	IsPersistent          bool               `json:"is_persistent"`
+	AcknowledgedAt        pgtype.Timestamptz `json:"acknowledged_at"`
+	ReminderIntervalMinutes pgtype.Int4      `json:"reminder_interval_minutes"`
+	LastRemindedAt        pgtype.Timestamptz `json:"last_reminded_at"`
 }
