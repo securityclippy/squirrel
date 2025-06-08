@@ -9,13 +9,17 @@ import (
 )
 
 type Querier interface {
+	AcknowledgeReminder(ctx context.Context, id int32) error
 	CreateReminder(ctx context.Context, arg CreateReminderParams) (Reminder, error)
 	DeleteReminder(ctx context.Context, id int32) error
 	GetActiveReminders(ctx context.Context) ([]Reminder, error)
+	GetPendingRecurringReminders(ctx context.Context) ([]Reminder, error)
 	GetRecurringReminders(ctx context.Context) ([]Reminder, error)
 	GetReminder(ctx context.Context, id int32) (Reminder, error)
 	GetRemindersByUser(ctx context.Context, userID string) ([]Reminder, error)
 	GetRemindersDueForDelivery(ctx context.Context) ([]Reminder, error)
+	GetUnacknowledgedPersistentReminders(ctx context.Context) ([]Reminder, error)
+	UpdateLastRemindedAt(ctx context.Context, id int32) error
 	UpdateReminder(ctx context.Context, arg UpdateReminderParams) (Reminder, error)
 	UpdateReminderStatus(ctx context.Context, arg UpdateReminderStatusParams) error
 }

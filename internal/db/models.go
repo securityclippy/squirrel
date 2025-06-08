@@ -17,24 +17,24 @@ type DeliveryMethod struct {
 }
 
 type Reminder struct {
-	ID                    int32              `json:"id"`
-	UserID                string             `json:"user_id"`
-	Title                 string             `json:"title"`
-	Description           pgtype.Text        `json:"description"`
-	ScheduledAt           pgtype.Timestamptz `json:"scheduled_at"`
-	DeliveryMethod        string             `json:"delivery_method"`
-	DeliveryAddress       string             `json:"delivery_address"`
-	Status                string             `json:"status"`
-	CreatedAt             pgtype.Timestamptz `json:"created_at"`
-	UpdatedAt             pgtype.Timestamptz `json:"updated_at"`
-	ReminderType          string             `json:"reminder_type"`
-	NotificationChannels  []byte             `json:"notification_channels"`
-	ScheduledTime         pgtype.Time        `json:"scheduled_time"`
-	ScheduledDaysOfWeek   []int32            `json:"scheduled_days_of_week"`
-	DeliveryWindowMinutes int32              `json:"delivery_window_minutes"`
-	IsActive              bool               `json:"is_active"`
-	IsPersistent          bool               `json:"is_persistent"`
-	AcknowledgedAt        pgtype.Timestamptz `json:"acknowledged_at"`
-	ReminderIntervalMinutes pgtype.Int4      `json:"reminder_interval_minutes"`
-	LastRemindedAt        pgtype.Timestamptz `json:"last_reminded_at"`
+	ID                      int32              `json:"id"`
+	UserID                  string             `json:"user_id"`
+	Title                   string             `json:"title"`
+	Description             pgtype.Text        `json:"description"`
+	ScheduledAt             pgtype.Timestamptz `json:"scheduled_at"`
+	DeliveryMethod          string             `json:"delivery_method"`
+	DeliveryAddress         string             `json:"delivery_address"`
+	Status                  string             `json:"status"`
+	CreatedAt               pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt               pgtype.Timestamptz `json:"updated_at"`
+	ReminderType            string             `json:"reminder_type"`
+	NotificationChannels    []byte             `json:"notification_channels"`
+	ScheduledTime           pgtype.Time        `json:"scheduled_time"`
+	ScheduledDaysOfWeek     []int32            `json:"scheduled_days_of_week"`
+	DeliveryWindowMinutes   int32              `json:"delivery_window_minutes"`
+	IsActive                bool               `json:"is_active"`
+	IsPersistent            bool               `json:"is_persistent"`
+	AcknowledgedAt          pgtype.Timestamptz `json:"acknowledged_at"`
+	ReminderIntervalMinutes pgtype.Int4        `json:"reminder_interval_minutes"`
+	LastRemindedAt          pgtype.Timestamptz `json:"last_reminded_at"`
 }
