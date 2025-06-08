@@ -5,10 +5,11 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"time"
 
 	"github.com/gorilla/mux"
-	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/spf13/cobra"
+	"reminder-service/internal/db"
 	"reminder-service/internal/handlers"
 	"reminder-service/internal/services"
 )
@@ -32,24 +33,18 @@ func init() {
 func runServer(cmd *cobra.Command, args []string) {
 	ctx := context.Background()
 	
-	// Database connection
+	// Database connection with retry logic
 	databaseURL := os.Getenv("DATABASE_URL")
 	if databaseURL == "" {
 		databaseURL = "postgres://user:password@localhost:5432/reminder_service?sslmode=disable"
 	}
 
-	pool, err := pgxpool.New(ctx, databaseURL)
+	// Attempt to connect with 5-minute timeout and exponential backoff
+	pool, err := db.ConnectWithRetry(ctx, databaseURL, 5*time.Minute)
 	if err != nil {
-		log.Fatal("Failed to create connection pool:", err)
+		log.Fatal("Failed to connect to database after retries:", err)
 	}
 	defer pool.Close()
-
-	// Test database connection
-	if err := pool.Ping(ctx); err != nil {
-		log.Fatal("Failed to ping database:", err)
-	}
-
-	log.Println("Connected to database successfully")
 
 	// Initialize services
 	reminderService := services.NewReminderService(pool)
