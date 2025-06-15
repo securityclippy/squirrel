@@ -14,7 +14,7 @@ export interface Reminder {
 	title: string;
 	description?: string;
 	scheduled_at: string;
-	reminder_type: 'one-time' | 'persistent';
+	reminder_type: 'one-time' | 'persistent' | 'recurring';
 	notification_channels: string[];
 	scheduled_time: string;
 	scheduled_days_of_week?: number[];
@@ -31,7 +31,7 @@ export interface CreateReminderRequest {
 	title: string;
 	description?: string;
 	scheduled_at: string;
-	reminder_type: 'one-time' | 'persistent';
+	reminder_type: 'one-time' | 'persistent' | 'recurring';
 	notification_channels: string[];
 	scheduled_time: string;
 	scheduled_days_of_week?: number[];
@@ -86,7 +86,11 @@ async function handleServerResponse<T>(response: Response): Promise<T> {
 export const serverApi = {
 	async getReminders(): Promise<{ reminders: Reminder[]; count: number }> {
 		console.log('Server API: Fetching reminders from', `${SERVER_API_BASE}/reminders`);
-		const response = await fetch(`${SERVER_API_BASE}/reminders`);
+		const response = await fetch(`${SERVER_API_BASE}/reminders`, {
+			headers: {
+				'Content-Type': 'application/json',
+			}
+		});
 		return handleServerResponse(response);
 	},
 

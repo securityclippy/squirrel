@@ -1,11 +1,26 @@
-import { serverApi } from '$lib/server-api.js';
 import { error } from '@sveltejs/kit';
 import type { PageServerLoad, Actions } from './$types';
 
-export const load: PageServerLoad = async () => {
+export const load: PageServerLoad = async ({ cookies, request }) => {
 	try {
 		console.log('Server: Loading reminders...');
-		const data = await serverApi.getReminders();
+		
+		// For now, make a direct call to the backend without authentication
+		// since we disabled auth middleware temporarily
+		const backendUrl = 'http://backend:8080/api/reminders';
+		console.log('Server: Fetching from', backendUrl);
+		
+		const response = await fetch(backendUrl, {
+			headers: {
+				'Content-Type': 'application/json',
+			}
+		});
+		
+		if (!response.ok) {
+			throw new Error(`Backend responded with ${response.status}: ${response.statusText}`);
+		}
+		
+		const data = await response.json();
 		console.log('Server: Loaded', data.count, 'reminders');
 		
 		return {

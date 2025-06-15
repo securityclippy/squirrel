@@ -1,7 +1,7 @@
 <script>
 	import { onMount } from 'svelte';
 	import { authStore } from '$lib/auth0';
-	import { api, type APIKey, type CreateAPIKeyRequest } from '$lib/api';
+	import { api } from '$lib/api';
 	import AuthGuard from '$lib/components/AuthGuard.svelte';
 
 	let apiKeys = [];

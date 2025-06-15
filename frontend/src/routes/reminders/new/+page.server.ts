@@ -121,10 +121,11 @@ export const actions: Actions = {
 			console.log('Server: Notification channels:', notificationChannels);
 			console.log('Server: Scheduled days of week:', scheduledDaysOfWeek);
 			
-			await serverApi.createReminder(reminderData);
-			console.log('Server: Successfully created reminder');
+			const newReminder = await serverApi.createReminder(reminderData);
+			console.log('Server: Successfully created reminder:', newReminder);
 			
-			redirect(303, '/reminders');
+			// Use a temporary success cookie or session flash message
+			redirect(303, '/reminders?created=true');
 		} catch (err) {
 			
 			console.error('Server: Error creating reminder:', err);

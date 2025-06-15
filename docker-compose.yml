@@ -23,7 +23,7 @@ services:
       PORT: 8080
       # Auth0 Configuration - Must match frontend values
       AUTH0_DOMAIN: ${PUBLIC_AUTH0_DOMAIN:-dev.auth0.com}
-      AUTH0_AUDIENCE: ${PUBLIC_AUTH0_AUDIENCE:-dev-api}
+      AUTH0_AUDIENCE: ${PUBLIC_AUTH0_AUDIENCE:-https://dev-p5vqcjkip31q2zci.us.auth0.com/api/v2/}
     depends_on:
       - postgres
 
@@ -59,7 +59,7 @@ services:
       # Auth0 Configuration - Replace with your values
       - PUBLIC_AUTH0_DOMAIN=${PUBLIC_AUTH0_DOMAIN:-your-domain.auth0.com}
       - PUBLIC_AUTH0_CLIENT_ID=${PUBLIC_AUTH0_CLIENT_ID:-your_client_id}
-      - PUBLIC_AUTH0_AUDIENCE=${PUBLIC_AUTH0_AUDIENCE:-https://your-api-audience.com}
+      - PUBLIC_AUTH0_AUDIENCE=${PUBLIC_AUTH0_AUDIENCE:-https://dev-p5vqcjkip31q2zci.us.auth0.com/api/v2/}
     volumes:
       - ./frontend:/app
       - /app/node_modules

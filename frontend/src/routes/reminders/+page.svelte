@@ -1,12 +1,31 @@
 <script>
 	import { enhance } from '$app/forms';
 	import { invalidateAll } from '$app/navigation';
+	import { page } from '$app/stores';
+	import { onMount } from 'svelte';
 	import AuthGuard from '$lib/components/AuthGuard.svelte';
 	
 	export let data;
 	
+	let showSuccessMessage = false;
+	
 	// Extract data from server-side load
 	$: ({ reminders, count } = data);
+
+	// Check for success message from URL params
+	onMount(() => {
+		if ($page.url.searchParams.get('created') === 'true') {
+			showSuccessMessage = true;
+			// Auto-hide the message after 5 seconds
+			setTimeout(() => {
+				showSuccessMessage = false;
+			}, 5000);
+			// Clean up the URL
+			const url = new URL($page.url);
+			url.searchParams.delete('created');
+			window.history.replaceState({}, '', url);
+		}
+	});
 
 	const formatDateTime = (dateString) => {
 		return new Date(dateString).toLocaleString();
@@ -60,7 +79,14 @@
 			</a>
 		</div>
 
-	{#if reminders.length === 0}
+		{#if showSuccessMessage}
+			<div class="success-message">
+				✅ Reminder created successfully!
+				<button class="close-btn" on:click={() => showSuccessMessage = false}>×</button>
+			</div>
+		{/if}
+
+		{#if reminders.length === 0}
 		<div class="empty-state">
 			<div class="empty-icon">📝</div>
 			<h3>No reminders yet</h3>
@@ -189,6 +215,47 @@
 	.add-button:hover {
 		transform: translateY(-2px);
 		box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+	}
+
+	.success-message {
+		background: linear-gradient(135deg, #d1fae5, #a7f3d0);
+		border: 1px solid #34d399;
+		border-radius: 8px;
+		padding: 1rem 1.5rem;
+		margin-bottom: 1.5rem;
+		color: #065f46;
+		font-weight: 600;
+		display: flex;
+		align-items: center;
+		justify-content: space-between;
+		animation: slideIn 0.3s ease-out;
+	}
+
+	.close-btn {
+		background: none;
+		border: none;
+		font-size: 1.5rem;
+		color: #065f46;
+		cursor: pointer;
+		padding: 0;
+		margin-left: 1rem;
+		opacity: 0.7;
+		transition: opacity 0.2s;
+	}
+
+	.close-btn:hover {
+		opacity: 1;
+	}
+
+	@keyframes slideIn {
+		from {
+			opacity: 0;
+			transform: translateY(-10px);
+		}
+		to {
+			opacity: 1;
+			transform: translateY(0);
+		}
 	}
 
 	.loading {
