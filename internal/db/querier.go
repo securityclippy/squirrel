@@ -16,7 +16,7 @@ type Querier interface {
 	GetPendingRecurringReminders(ctx context.Context) ([]Reminder, error)
 	GetRecurringReminders(ctx context.Context) ([]Reminder, error)
 	GetReminder(ctx context.Context, id int32) (Reminder, error)
-	GetRemindersByUser(ctx context.Context, userID string) ([]Reminder, error)
+	GetRemindersByUser(ctx context.Context, userID int32) ([]Reminder, error)
 	GetRemindersDueForDelivery(ctx context.Context) ([]Reminder, error)
 	GetUnacknowledgedPersistentReminders(ctx context.Context) ([]Reminder, error)
 	UpdateLastRemindedAt(ctx context.Context, id int32) error

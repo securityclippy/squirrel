@@ -11,6 +11,7 @@ import (
 	"github.com/spf13/cobra"
 	"reminder-service/internal/db"
 	"reminder-service/internal/handlers"
+	"reminder-service/internal/middleware"
 	"reminder-service/internal/services"
 )
 
@@ -48,12 +49,25 @@ func runServer(cmd *cobra.Command, args []string) {
 
 	// Initialize services
 	reminderService := services.NewReminderService(pool)
+	userService := services.NewUserService(pool)
+
+	// Initialize middleware
+	authMiddleware := middleware.NewAuthMiddleware(userService)
 
 	// Initialize handlers
 	reminderHandler := handlers.NewReminderHandler(reminderService)
+	userHandler := handlers.NewUserHandler(userService)
 
 	// Setup router
 	router := mux.NewRouter()
+
+	// Request logging middleware
+	router.Use(func(next http.Handler) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			log.Printf("Received request: %s %s", r.Method, r.URL.Path)
+			next.ServeHTTP(w, r)
+		})
+	})
 
 	// CORS middleware
 	router.Use(func(next http.Handler) http.Handler {
@@ -77,8 +91,9 @@ func runServer(cmd *cobra.Command, args []string) {
 		w.Write([]byte("OK"))
 	}).Methods("GET")
 
-	// Register reminder routes
-	reminderHandler.RegisterRoutes(router)
+	// Register routes
+	reminderHandler.RegisterRoutes(router, authMiddleware)
+	userHandler.RegisterRoutes(router, authMiddleware)
 
 	// Use environment variable if port flag not explicitly set
 	if !cmd.Flags().Changed("port") {

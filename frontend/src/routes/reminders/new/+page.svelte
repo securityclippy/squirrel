@@ -1,6 +1,7 @@
 <script>
 	import { enhance } from '$app/forms';
 	import { onMount } from 'svelte';
+	import AuthGuard from '$lib/components/AuthGuard.svelte';
 	
 	export let form;
 	
@@ -68,11 +69,12 @@
 	<title>New Reminder - Squirrel Reminders</title>
 </svelte:head>
 
-<div class="new-reminder-page">
-	<div class="header">
-		<a href="/reminders" class="back-button">← Back to Reminders</a>
-		<h1>Create New Reminder</h1>
-	</div>
+<AuthGuard>
+	<div class="new-reminder-page">
+		<div class="header">
+			<a href="/reminders" class="back-button">← Back to Reminders</a>
+			<h1>Create New Reminder</h1>
+		</div>
 
 	<form method="POST" use:enhance={handleFormSubmit} class="reminder-form">
 		{#if error}
@@ -298,7 +300,8 @@
 			</button>
 		</div>
 	</form>
-</div>
+	</div>
+</AuthGuard>
 
 <style>
 	.new-reminder-page {

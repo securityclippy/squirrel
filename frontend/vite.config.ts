@@ -5,6 +5,7 @@ export default defineConfig({
 	plugins: [sveltekit()],
 	server: {
 		host: '0.0.0.0',
-		port: 5173
+		port: 5173,
+		allowedHosts: ['stack-node-1.java-ray.ts.net']
 	}
 });

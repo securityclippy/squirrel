@@ -25,7 +25,7 @@ func NewReminderService(pool *pgxpool.Pool) *ReminderService {
 	}
 }
 
-func (s *ReminderService) CreateReminder(ctx context.Context, userID string, req *models.CreateReminderRequest) (*models.Reminder, error) {
+func (s *ReminderService) CreateReminder(ctx context.Context, userID int, req *models.CreateReminderRequest) (*models.Reminder, error) {
 	scheduledTime, err := time.Parse("15:04", req.ScheduledTime)
 	if err != nil {
 		return nil, fmt.Errorf("invalid scheduled_time format: %w", err)
@@ -47,7 +47,7 @@ func (s *ReminderService) CreateReminder(ctx context.Context, userID string, req
 	}
 
 	params := db.CreateReminderParams{
-		UserID:      userID,
+		UserID:      int32(userID),
 		Title:       req.Title,
 		Description: pgtype.Text{String: "", Valid: req.Description != nil},
 		ScheduledAt: pgtype.Timestamptz{
@@ -93,8 +93,8 @@ func (s *ReminderService) GetReminder(ctx context.Context, id int32) (*models.Re
 	return s.convertDBReminderToModel(&reminder), nil
 }
 
-func (s *ReminderService) GetRemindersByUser(ctx context.Context, userID string) ([]models.Reminder, error) {
-	dbReminders, err := s.queries.GetRemindersByUser(ctx, userID)
+func (s *ReminderService) GetRemindersByUser(ctx context.Context, userID int) ([]models.Reminder, error) {
+	dbReminders, err := s.queries.GetRemindersByUser(ctx, int32(userID))
 	if err != nil {
 		return nil, fmt.Errorf("failed to get reminders: %w", err)
 	}
@@ -220,7 +220,7 @@ func (s *ReminderService) GetRemindersDueForDelivery(ctx context.Context) ([]mod
 func (s *ReminderService) convertDBReminderToModel(dbReminder *db.Reminder) *models.Reminder {
 	reminder := &models.Reminder{
 		ID:                    int(dbReminder.ID),
-		UserID:                dbReminder.UserID,
+		UserID:                int(dbReminder.UserID),
 		Title:                 dbReminder.Title,
 		ReminderType:          models.ReminderType(dbReminder.ReminderType),
 		DeliveryWindowMinutes: int(dbReminder.DeliveryWindowMinutes),

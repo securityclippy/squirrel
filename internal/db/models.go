@@ -8,6 +8,20 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
+type ApiKey struct {
+	ID          int32              `json:"id"`
+	UserID      int32              `json:"user_id"`
+	Name        string             `json:"name"`
+	KeyHash     string             `json:"key_hash"`
+	KeyPrefix   string             `json:"key_prefix"`
+	Permissions []byte             `json:"permissions"`
+	ExpiresAt   pgtype.Timestamptz `json:"expires_at"`
+	LastUsedAt  pgtype.Timestamptz `json:"last_used_at"`
+	IsActive    pgtype.Bool        `json:"is_active"`
+	CreatedAt   pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt   pgtype.Timestamptz `json:"updated_at"`
+}
+
 type DeliveryMethod struct {
 	ID        int32              `json:"id"`
 	Name      string             `json:"name"`
@@ -18,7 +32,6 @@ type DeliveryMethod struct {
 
 type Reminder struct {
 	ID                      int32              `json:"id"`
-	UserID                  string             `json:"user_id"`
 	Title                   string             `json:"title"`
 	Description             pgtype.Text        `json:"description"`
 	ScheduledAt             pgtype.Timestamptz `json:"scheduled_at"`
@@ -37,4 +50,17 @@ type Reminder struct {
 	AcknowledgedAt          pgtype.Timestamptz `json:"acknowledged_at"`
 	ReminderIntervalMinutes pgtype.Int4        `json:"reminder_interval_minutes"`
 	LastRemindedAt          pgtype.Timestamptz `json:"last_reminded_at"`
+	UserID                  int32              `json:"user_id"`
+}
+
+type User struct {
+	ID            int32              `json:"id"`
+	Auth0ID       string             `json:"auth0_id"`
+	Email         string             `json:"email"`
+	Name          string             `json:"name"`
+	Picture       pgtype.Text        `json:"picture"`
+	EmailVerified pgtype.Bool        `json:"email_verified"`
+	CreatedAt     pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt     pgtype.Timestamptz `json:"updated_at"`
+	LastLoginAt   pgtype.Timestamptz `json:"last_login_at"`
 }

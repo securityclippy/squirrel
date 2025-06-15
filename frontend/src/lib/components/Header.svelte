@@ -1,11 +1,20 @@
+<script>
+	import AuthButton from './AuthButton.svelte';
+</script>
+
 <header class="top-bar">
 	<div class="header-content">
 		<div class="title-section">
 			<p class="flavor-text">reminders for people who are easily distracted by...</p>
 		</div>
-		<div class="logo-section">
-			<div class="squirrel-logo">🐿️</div>
-			<div class="exclamation">!</div>
+		<div class="header-right">
+			<div class="logo-section">
+				<div class="squirrel-logo">🐿️</div>
+				<div class="exclamation">!</div>
+			</div>
+			<div class="auth-section">
+				<AuthButton />
+			</div>
 		</div>
 	</div>
 </header>
@@ -31,10 +40,21 @@
 		gap: 0.25rem;
 	}
 
+	.header-right {
+		display: flex;
+		align-items: center;
+		gap: 2rem;
+	}
+
 	.logo-section {
 		display: flex;
 		align-items: center;
 		gap: 0.5rem;
+	}
+
+	.auth-section {
+		display: flex;
+		align-items: center;
 	}
 
 	.flavor-text {

@@ -6,6 +6,7 @@ import (
 	"strconv"
 
 	"github.com/gorilla/mux"
+	"reminder-service/internal/middleware"
 	"reminder-service/internal/models"
 	"reminder-service/internal/services"
 )
@@ -21,16 +22,19 @@ func NewReminderHandler(reminderService *services.ReminderService) *ReminderHand
 }
 
 func (h *ReminderHandler) CreateReminder(w http.ResponseWriter, r *http.Request) {
+	user, ok := middleware.GetUserFromContext(r.Context())
+	if !ok {
+		http.Error(w, "User not found in context", http.StatusInternalServerError)
+		return
+	}
+
 	var req models.CreateReminderRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		http.Error(w, "Invalid JSON", http.StatusBadRequest)
 		return
 	}
 
-	// For now, use a hardcoded user ID. In production, extract from auth token
-	userID := "user123"
-
-	reminder, err := h.reminderService.CreateReminder(r.Context(), userID, &req)
+	reminder, err := h.reminderService.CreateReminder(r.Context(), user.ID, &req)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -64,10 +68,13 @@ func (h *ReminderHandler) GetReminder(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *ReminderHandler) GetReminders(w http.ResponseWriter, r *http.Request) {
-	// For now, use a hardcoded user ID. In production, extract from auth token
-	userID := "user123"
+	user, ok := middleware.GetUserFromContext(r.Context())
+	if !ok {
+		http.Error(w, "User not found in context", http.StatusInternalServerError)
+		return
+	}
 
-	reminders, err := h.reminderService.GetRemindersByUser(r.Context(), userID)
+	reminders, err := h.reminderService.GetRemindersByUser(r.Context(), user.ID)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -129,10 +136,14 @@ func (h *ReminderHandler) DeleteReminder(w http.ResponseWriter, r *http.Request)
 	w.WriteHeader(http.StatusNoContent)
 }
 
-func (h *ReminderHandler) RegisterRoutes(router *mux.Router) {
-	router.HandleFunc("/api/reminders", h.CreateReminder).Methods("POST")
-	router.HandleFunc("/api/reminders", h.GetReminders).Methods("GET")
-	router.HandleFunc("/api/reminders/{id:[0-9]+}", h.GetReminder).Methods("GET")
-	router.HandleFunc("/api/reminders/{id:[0-9]+}", h.UpdateReminder).Methods("PUT")
-	router.HandleFunc("/api/reminders/{id:[0-9]+}", h.DeleteReminder).Methods("DELETE")
+func (h *ReminderHandler) RegisterRoutes(router *mux.Router, authMiddleware *middleware.AuthMiddleware) {
+	// Reminder routes require authentication
+	reminderRouter := router.PathPrefix("/api/reminders").Subrouter()
+	reminderRouter.Use(authMiddleware.AuthenticateAny)
+
+	reminderRouter.HandleFunc("", h.CreateReminder).Methods("POST")
+	reminderRouter.HandleFunc("", h.GetReminders).Methods("GET")
+	reminderRouter.HandleFunc("/{id:[0-9]+}", h.GetReminder).Methods("GET")
+	reminderRouter.HandleFunc("/{id:[0-9]+}", h.UpdateReminder).Methods("PUT")
+	reminderRouter.HandleFunc("/{id:[0-9]+}", h.DeleteReminder).Methods("DELETE")
 }

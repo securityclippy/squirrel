@@ -1,4 +1,5 @@
 import { env } from '$env/dynamic/public';
+import { getAccessToken } from './auth0';
 
 // Get API base URL from environment variable or use dynamic detection
 const getApiBase = () => {
@@ -27,9 +28,28 @@ const getApiBase = () => {
 
 const API_BASE = getApiBase();
 
+// Helper function to get authentication headers
+async function getAuthHeaders(): Promise<HeadersInit> {
+	const headers: HeadersInit = {
+		'Content-Type': 'application/json',
+	};
+
+	try {
+		const token = await getAccessToken();
+		if (token) {
+			headers['Authorization'] = `Bearer ${token}`;
+		}
+	} catch (error) {
+		console.warn('Failed to get access token:', error);
+		// Continue without auth header - backend will return 401
+	}
+
+	return headers;
+}
+
 export interface Reminder {
 	id: number;
-	user_id: string;
+	user_id: number;
 	title: string;
 	description?: string;
 	scheduled_at: string;
@@ -81,6 +101,49 @@ export interface UpdateReminderRequest {
 	reminder_interval_minutes?: number;
 }
 
+export interface User {
+	id: number;
+	auth0_id: string;
+	email: string;
+	name: string;
+	picture?: string;
+	email_verified: boolean;
+	created_at: string;
+	updated_at: string;
+	last_login_at?: string;
+}
+
+export interface UpdateUserRequest {
+	name?: string;
+	picture?: string;
+	email_verified?: boolean;
+	last_login_at?: string;
+}
+
+export interface APIKey {
+	id: number;
+	user_id: number;
+	name: string;
+	key_prefix: string;
+	permissions: string[];
+	expires_at?: string;
+	last_used_at?: string;
+	is_active: boolean;
+	created_at: string;
+	updated_at: string;
+}
+
+export interface CreateAPIKeyRequest {
+	name: string;
+	permissions: string[];
+	expires_at?: string;
+}
+
+export interface CreateAPIKeyResponse {
+	api_key: APIKey;
+	key: string;
+}
+
 class ApiError extends Error {
 	constructor(message: string, public status: number) {
 		super(message);
@@ -105,12 +168,14 @@ export const api = {
 	async getReminders(): Promise<{ reminders: Reminder[]; count: number }> {
 		console.log('API_BASE:', API_BASE);
 		console.log('Making request to:', `${API_BASE}/reminders`);
-		const response = await fetch(`${API_BASE}/reminders`);
+		const headers = await getAuthHeaders();
+		const response = await fetch(`${API_BASE}/reminders`, { headers });
 		return handleResponse(response);
 	},
 
 	async getReminder(id: number): Promise<Reminder> {
-		const response = await fetch(`${API_BASE}/reminders/${id}`);
+		const headers = await getAuthHeaders();
+		const response = await fetch(`${API_BASE}/reminders/${id}`, { headers });
 		return handleResponse(response);
 	},
 
@@ -118,11 +183,10 @@ export const api = {
 		console.log('Creating reminder with data:', data);
 		console.log('Sending POST to:', `${API_BASE}/reminders`);
 		try {
+			const headers = await getAuthHeaders();
 			const response = await fetch(`${API_BASE}/reminders`, {
 				method: 'POST',
-				headers: {
-					'Content-Type': 'application/json',
-				},
+				headers,
 				body: JSON.stringify(data),
 			});
 			console.log('Response status:', response.status);
@@ -135,26 +199,72 @@ export const api = {
 	},
 
 	async updateReminder(id: number, data: UpdateReminderRequest): Promise<Reminder> {
+		const headers = await getAuthHeaders();
 		const response = await fetch(`${API_BASE}/reminders/${id}`, {
 			method: 'PUT',
-			headers: {
-				'Content-Type': 'application/json',
-			},
+			headers,
 			body: JSON.stringify(data),
 		});
 		return handleResponse(response);
 	},
 
 	async deleteReminder(id: number): Promise<void> {
+		const headers = await getAuthHeaders();
 		const response = await fetch(`${API_BASE}/reminders/${id}`, {
 			method: 'DELETE',
+			headers
 		});
 		return handleResponse(response);
 	},
 
 	async acknowledgeReminder(id: number): Promise<void> {
+		const headers = await getAuthHeaders();
 		const response = await fetch(`${API_BASE}/reminders/${id}/acknowledge`, {
 			method: 'POST',
+			headers
+		});
+		return handleResponse(response);
+	},
+
+	// User management
+	async getUserProfile(): Promise<User> {
+		const headers = await getAuthHeaders();
+		const response = await fetch(`${API_BASE}/users/profile`, { headers });
+		return handleResponse(response);
+	},
+
+	async updateUserProfile(data: UpdateUserRequest): Promise<User> {
+		const headers = await getAuthHeaders();
+		const response = await fetch(`${API_BASE}/users/profile`, {
+			method: 'PUT',
+			headers,
+			body: JSON.stringify(data),
+		});
+		return handleResponse(response);
+	},
+
+	// API Key management
+	async getAPIKeys(): Promise<{ api_keys: APIKey[]; count: number }> {
+		const headers = await getAuthHeaders();
+		const response = await fetch(`${API_BASE}/users/api-keys`, { headers });
+		return handleResponse(response);
+	},
+
+	async createAPIKey(data: CreateAPIKeyRequest): Promise<CreateAPIKeyResponse> {
+		const headers = await getAuthHeaders();
+		const response = await fetch(`${API_BASE}/users/api-keys`, {
+			method: 'POST',
+			headers,
+			body: JSON.stringify(data),
+		});
+		return handleResponse(response);
+	},
+
+	async revokeAPIKey(id: number): Promise<void> {
+		const headers = await getAuthHeaders();
+		const response = await fetch(`${API_BASE}/users/api-keys/${id}`, {
+			method: 'DELETE',
+			headers
 		});
 		return handleResponse(response);
 	},

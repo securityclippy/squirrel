@@ -1,6 +1,7 @@
 <script>
 	import { enhance } from '$app/forms';
 	import { invalidateAll } from '$app/navigation';
+	import AuthGuard from '$lib/components/AuthGuard.svelte';
 	
 	export let data;
 	
@@ -49,14 +50,15 @@
 	<title>Reminders - Squirrel Reminders</title>
 </svelte:head>
 
-<div class="reminders-page">
-	<div class="header">
-		<h1>My Reminders</h1>
-		<a href="/reminders/new" class="add-button">
-			<span class="icon">➕</span>
-			Add New Reminder
-		</a>
-	</div>
+<AuthGuard>
+	<div class="reminders-page">
+		<div class="header">
+			<h1>My Reminders</h1>
+			<a href="/reminders/new" class="add-button">
+				<span class="icon">➕</span>
+				Add New Reminder
+			</a>
+		</div>
 
 	{#if reminders.length === 0}
 		<div class="empty-state">
@@ -146,7 +148,8 @@
 			{/each}
 		</div>
 	{/if}
-</div>
+	</div>
+</AuthGuard>
 
 <style>
 	.reminders-page {
