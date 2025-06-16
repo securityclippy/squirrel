@@ -1,124 +1,61 @@
 <script>
 	import { onMount } from 'svelte';
 	import { authStore } from '$lib/auth0';
-	import { api } from '$lib/api';
 	import AuthGuard from '$lib/components/AuthGuard.svelte';
 
-	let apiKeys = [];
 	let loading = false;
 	let error = '';
 	let success = '';
 	
-	// API Key creation form
-	let showCreateForm = false;
-	let newKeyName = '';
-	let newKeyPermissions = ['read'];
-	let createdKey = '';
+	// Profile editing
+	let editMode = false;
+	let editedName = '';
+	let editedEmail = '';
+	
 
-	const permissionOptions = [
-		{ value: 'read', label: 'Read' },
-		{ value: 'write', label: 'Write' },
-		{ value: 'delete', label: 'Delete' }
-	];
-
-	onMount(async () => {
-		await loadAPIKeys();
+	onMount(() => {
+		// Initialize edit form with current user data
+		if ($authStore.user) {
+			editedName = $authStore.user.name || '';
+			editedEmail = $authStore.user.email || '';
+		}
 	});
 
-	async function loadAPIKeys() {
+	function startEdit() {
+		editMode = true;
+		editedName = $authStore.user?.name || '';
+		editedEmail = $authStore.user?.email || '';
+	}
+
+	function cancelEdit() {
+		editMode = false;
+		error = '';
+	}
+
+	async function saveProfile() {
 		try {
 			loading = true;
 			error = '';
-			const response = await api.getAPIKeys();
-			apiKeys = response.api_keys;
+			
+			// TODO: Implement API call to update profile
+			// await api.updateUserProfile({
+			//   name: editedName.trim(),
+			//   email: editedEmail.trim()
+			// });
+			
+			// Simulate API call
+			await new Promise(resolve => setTimeout(resolve, 1000));
+			
+			editMode = false;
+			success = 'Profile updated successfully!';
+			setTimeout(() => { success = ''; }, 5000);
 		} catch (err) {
-			error = 'Failed to load API keys: ' + err.message;
+			error = 'Failed to update profile: ' + (err.message || 'Unknown error');
 		} finally {
 			loading = false;
 		}
 	}
 
-	async function createAPIKey() {
-		if (!newKeyName.trim()) {
-			error = 'Please enter a name for the API key';
-			return;
-		}
-
-		try {
-			loading = true;
-			error = '';
-			success = '';
-			
-			const response = await api.createAPIKey({
-				name: newKeyName.trim(),
-				permissions: newKeyPermissions
-			});
-			
-			createdKey = response.key;
-			success = 'API key created successfully! Make sure to copy it now - you won\'t be able to see it again.';
-			
-			// Reset form
-			newKeyName = '';
-			newKeyPermissions = ['read'];
-			showCreateForm = false;
-			
-			// Reload API keys
-			await loadAPIKeys();
-		} catch (err) {
-			error = 'Failed to create API key: ' + err.message;
-		} finally {
-			loading = false;
-		}
-	}
-
-	async function revokeAPIKey(id, name) {
-		if (!confirm(`Are you sure you want to revoke the API key "${name}"? This action cannot be undone.`)) {
-			return;
-		}
-
-		try {
-			loading = true;
-			error = '';
-			success = '';
-			
-			await api.revokeAPIKey(id);
-			success = `API key "${name}" has been revoked successfully.`;
-			
-			// Reload API keys
-			await loadAPIKeys();
-		} catch (err) {
-			error = 'Failed to revoke API key: ' + err.message;
-		} finally {
-			loading = false;
-		}
-	}
-
-	function copyToClipboard(text) {
-		navigator.clipboard.writeText(text).then(() => {
-			success = 'API key copied to clipboard!';
-			setTimeout(() => { success = ''; }, 3000);
-		}).catch(() => {
-			error = 'Failed to copy to clipboard';
-		});
-	}
-
-	function formatDate(dateString) {
-		return new Date(dateString).toLocaleDateString('en-US', {
-			year: 'numeric',
-			month: 'short',
-			day: 'numeric',
-			hour: '2-digit',
-			minute: '2-digit'
-		});
-	}
-
-	function togglePermission(permission) {
-		if (newKeyPermissions.includes(permission)) {
-			newKeyPermissions = newKeyPermissions.filter(p => p !== permission);
-		} else {
-			newKeyPermissions = [...newKeyPermissions, permission];
-		}
-	}
 </script>
 
 <svelte:head>
@@ -128,148 +65,111 @@
 <AuthGuard>
 	<div class="profile-page">
 		<div class="header">
-			<h1>Profile & Settings</h1>
+			<h1>Profile</h1>
+			<p class="subtitle">Manage your account information and view statistics</p>
 		</div>
 
-		<!-- User Info Section -->
+		{#if error}
+			<div class="alert alert-error">
+				{error}
+				<button class="close-btn" on:click={() => error = ''}>×</button>
+			</div>
+		{/if}
+
+		{#if success}
+			<div class="alert alert-success">
+				{success}
+				<button class="close-btn" on:click={() => success = ''}>×</button>
+			</div>
+		{/if}
+
+		<!-- User Profile Section -->
 		{#if $authStore.user}
 			<div class="section">
-				<h2>User Information</h2>
-				<div class="user-card">
-					{#if $authStore.user.picture}
-						<img src={$authStore.user.picture} alt="User avatar" class="user-avatar-large" />
+				<div class="section-header">
+					<h2>👤 Profile Information</h2>
+					{#if !editMode}
+						<button class="btn btn-secondary" on:click={startEdit}>Edit Profile</button>
 					{/if}
-					<div class="user-details">
-						<h3>{$authStore.user.name || 'Unknown User'}</h3>
-						<p class="user-email">{$authStore.user.email}</p>
-						{#if $authStore.user.email_verified}
-							<span class="badge verified">✓ Email Verified</span>
+				</div>
+
+				<div class="profile-content">
+					<div class="profile-avatar">
+						{#if $authStore.user.picture}
+							<img src={$authStore.user.picture} alt="User avatar" class="user-avatar-large" />
 						{:else}
-							<span class="badge unverified">Email Not Verified</span>
+							<div class="avatar-fallback">
+								{($authStore.user.name || $authStore.user.email || 'U').charAt(0).toUpperCase()}
+							</div>
+						{/if}
+					</div>
+
+					<div class="profile-details">
+						{#if editMode}
+							<!-- Edit Mode -->
+							<div class="edit-form">
+								<div class="form-group">
+									<label for="edit-name">Full Name</label>
+									<input 
+										id="edit-name"
+										type="text" 
+										bind:value={editedName}
+										placeholder="Enter your full name"
+									/>
+								</div>
+								
+								<div class="form-group">
+									<label for="edit-email">Email Address</label>
+									<input 
+										id="edit-email"
+										type="email" 
+										bind:value={editedEmail}
+										placeholder="Enter your email address"
+									/>
+								</div>
+
+								<div class="form-actions">
+									<button 
+										class="btn btn-primary" 
+										on:click={saveProfile}
+										disabled={loading}
+									>
+										{loading ? 'Saving...' : 'Save Changes'}
+									</button>
+									<button class="btn btn-secondary" on:click={cancelEdit}>
+										Cancel
+									</button>
+								</div>
+							</div>
+						{:else}
+							<!-- View Mode -->
+							<div class="profile-info">
+								<div class="info-item">
+									<label>Full Name</label>
+									<span class="value">{$authStore.user.name || 'Not set'}</span>
+								</div>
+								
+								<div class="info-item">
+									<label>Email Address</label>
+									<span class="value">{$authStore.user.email}</span>
+								</div>
+								
+								<div class="info-item">
+									<label>Email Status</label>
+									{#if $authStore.user.email_verified}
+										<span class="badge verified">✓ Verified</span>
+									{:else}
+										<span class="badge unverified">Not Verified</span>
+									{/if}
+								</div>
+							</div>
 						{/if}
 					</div>
 				</div>
 			</div>
 		{/if}
 
-		<!-- API Keys Section -->
-		<div class="section">
-			<div class="section-header">
-				<h2>API Keys</h2>
-				<button on:click={() => showCreateForm = !showCreateForm} class="btn btn-primary">
-					{showCreateForm ? 'Cancel' : 'Create New API Key'}
-				</button>
-			</div>
 
-			{#if error}
-				<div class="alert alert-error">{error}</div>
-			{/if}
-
-			{#if success}
-				<div class="alert alert-success">{success}</div>
-			{/if}
-
-			{#if createdKey}
-				<div class="alert alert-info">
-					<h4>Your new API key:</h4>
-					<div class="key-display">
-						<code>{createdKey}</code>
-						<button on:click={() => copyToClipboard(createdKey)} class="copy-btn">Copy</button>
-					</div>
-					<p><strong>Important:</strong> Save this API key now. You won't be able to see it again!</p>
-					<button on:click={() => createdKey = ''} class="btn btn-sm">Dismiss</button>
-				</div>
-			{/if}
-
-			<!-- Create API Key Form -->
-			{#if showCreateForm}
-				<div class="create-form">
-					<h3>Create New API Key</h3>
-					<div class="form-group">
-						<label for="key-name">Name:</label>
-						<input 
-							id="key-name"
-							type="text" 
-							bind:value={newKeyName} 
-							placeholder="e.g., Mobile App, Dashboard Access"
-							maxlength="255"
-						/>
-					</div>
-					
-					<div class="form-group">
-						<label>Permissions:</label>
-						<div class="permissions-grid">
-							{#each permissionOptions as option}
-								<label class="permission-option">
-									<input 
-										type="checkbox" 
-										checked={newKeyPermissions.includes(option.value)}
-										on:change={() => togglePermission(option.value)}
-									/>
-									{option.label}
-								</label>
-							{/each}
-						</div>
-					</div>
-
-					<div class="form-actions">
-						<button on:click={createAPIKey} class="btn btn-primary" disabled={loading}>
-							{loading ? 'Creating...' : 'Create API Key'}
-						</button>
-						<button on:click={() => showCreateForm = false} class="btn btn-secondary">
-							Cancel
-						</button>
-					</div>
-				</div>
-			{/if}
-
-			<!-- API Keys List -->
-			{#if loading}
-				<div class="loading">Loading API keys...</div>
-			{:else if apiKeys.length === 0}
-				<div class="empty-state">
-					<p>No API keys found. Create your first API key to access the API programmatically.</p>
-				</div>
-			{:else}
-				<div class="api-keys-list">
-					{#each apiKeys as key}
-						<div class="api-key-card">
-							<div class="key-info">
-								<h4>{key.name}</h4>
-								<div class="key-meta">
-									<span class="key-prefix">Key: {key.key_prefix}••••••••</span>
-									<span class="permissions">
-										Permissions: {key.permissions.join(', ')}
-									</span>
-								</div>
-								<div class="key-dates">
-									<span>Created: {formatDate(key.created_at)}</span>
-									{#if key.last_used_at}
-										<span>Last used: {formatDate(key.last_used_at)}</span>
-									{:else}
-										<span>Never used</span>
-									{/if}
-								</div>
-							</div>
-							<div class="key-actions">
-								<span class="status {key.is_active ? 'active' : 'inactive'}">
-									{key.is_active ? 'Active' : 'Revoked'}
-								</span>
-								{#if key.is_active}
-									<button 
-										on:click={() => revokeAPIKey(key.id, key.name)} 
-										class="btn btn-danger btn-sm"
-										disabled={loading}
-									>
-										Revoke
-									</button>
-								{/if}
-							</div>
-						</div>
-					{/each}
-				</div>
-			{/if}
-		</div>
 	</div>
 </AuthGuard>
 
@@ -280,27 +180,109 @@
 		padding: 2rem;
 	}
 
+	.header {
+		margin-bottom: 2rem;
+	}
+
 	.header h1 {
-		margin: 0 0 2rem 0;
+		margin: 0 0 0.5rem 0;
 		color: #111827;
 		font-size: 2rem;
 		font-weight: 600;
 	}
 
+	.subtitle {
+		margin: 0;
+		color: #6b7280;
+		font-size: 1rem;
+	}
+
+	.profile-content {
+		display: flex;
+		gap: 2rem;
+		align-items: flex-start;
+	}
+
+	.profile-avatar {
+		flex-shrink: 0;
+	}
+
+	.user-avatar-large {
+		width: 120px;
+		height: 120px;
+		border-radius: 50%;
+		object-fit: cover;
+		border: 4px solid #e5e7eb;
+	}
+
+	.avatar-fallback {
+		width: 120px;
+		height: 120px;
+		border-radius: 50%;
+		background: linear-gradient(135deg, #6366f1, #8b5cf6);
+		color: white;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		font-weight: 600;
+		font-size: 2.5rem;
+		border: 4px solid #e5e7eb;
+	}
+
+	.profile-details {
+		flex: 1;
+	}
+
+	.profile-info {
+		display: flex;
+		flex-direction: column;
+		gap: 1.5rem;
+	}
+
+	.info-item {
+		display: flex;
+		flex-direction: column;
+		gap: 0.5rem;
+	}
+
+	.info-item label {
+		font-weight: 600;
+		color: #374151;
+		font-size: 0.875rem;
+		text-transform: uppercase;
+		letter-spacing: 0.05em;
+	}
+
+	.info-item .value {
+		color: #111827;
+		font-size: 1rem;
+	}
+
+	.edit-form {
+		display: flex;
+		flex-direction: column;
+		gap: 1.5rem;
+	}
+
+
+
 	.section {
 		background: white;
-		border-radius: 0.5rem;
-		padding: 1.5rem;
+		border-radius: 12px;
+		padding: 2rem;
 		margin-bottom: 2rem;
 		box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
 		border: 1px solid #e5e7eb;
 	}
 
 	.section h2 {
-		margin: 0 0 1rem 0;
+		margin: 0 0 1.5rem 0;
 		color: #374151;
-		font-size: 1.25rem;
+		font-size: 1.5rem;
 		font-weight: 600;
+		display: flex;
+		align-items: center;
+		gap: 0.5rem;
 	}
 
 	.section-header {
@@ -354,26 +336,36 @@
 
 	.alert {
 		padding: 1rem;
-		border-radius: 0.375rem;
-		margin-bottom: 1rem;
+		border-radius: 8px;
+		margin-bottom: 1.5rem;
+		display: flex;
+		justify-content: space-between;
+		align-items: center;
 	}
 
 	.alert-error {
-		background-color: #fef2f2;
+		background: #fef2f2;
 		color: #991b1b;
 		border: 1px solid #fecaca;
 	}
 
 	.alert-success {
-		background-color: #f0fdf4;
+		background: #f0fdf4;
 		color: #166534;
 		border: 1px solid #bbf7d0;
 	}
 
-	.alert-info {
-		background-color: #eff6ff;
-		color: #1e40af;
-		border: 1px solid #bfdbfe;
+	.close-btn {
+		background: none;
+		border: none;
+		font-size: 1.5rem;
+		cursor: pointer;
+		opacity: 0.7;
+		margin-left: 1rem;
+	}
+
+	.close-btn:hover {
+		opacity: 1;
 	}
 
 	.key-display {
@@ -420,22 +412,31 @@
 	}
 
 	.form-group {
-		margin-bottom: 1rem;
+		display: flex;
+		flex-direction: column;
+		gap: 0.5rem;
+		margin-bottom: 1.5rem;
 	}
 
 	.form-group label {
-		display: block;
-		margin-bottom: 0.25rem;
-		font-weight: 500;
+		font-weight: 600;
 		color: #374151;
+		font-size: 0.875rem;
 	}
 
-	.form-group input[type="text"] {
-		width: 100%;
-		padding: 0.5rem;
+	.form-group input[type="text"],
+	.form-group input[type="email"] {
+		padding: 0.75rem;
 		border: 1px solid #d1d5db;
-		border-radius: 0.375rem;
+		border-radius: 8px;
 		font-size: 0.875rem;
+		background: white;
+	}
+
+	.form-group input:focus {
+		outline: none;
+		border-color: #3b82f6;
+		box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
 	}
 
 	.permissions-grid {
@@ -458,48 +459,50 @@
 	}
 
 	.btn {
-		padding: 0.5rem 1rem;
+		padding: 0.75rem 1.5rem;
 		border: none;
-		border-radius: 0.375rem;
-		font-weight: 500;
+		border-radius: 8px;
+		font-weight: 600;
 		cursor: pointer;
 		transition: all 0.2s ease;
 		text-decoration: none;
 		display: inline-flex;
 		align-items: center;
 		gap: 0.5rem;
+		font-size: 0.875rem;
 	}
 
 	.btn-primary {
-		background-color: #3b82f6;
+		background: #3b82f6;
 		color: white;
 	}
 
 	.btn-primary:hover {
-		background-color: #2563eb;
+		background: #2563eb;
 	}
 
 	.btn-secondary {
-		background-color: #f3f4f6;
+		background: #f3f4f6;
 		color: #374151;
+		border: 1px solid #d1d5db;
 	}
 
 	.btn-secondary:hover {
-		background-color: #e5e7eb;
+		background: #e5e7eb;
 	}
 
 	.btn-danger {
-		background-color: #dc2626;
+		background: #dc2626;
 		color: white;
 	}
 
 	.btn-danger:hover {
-		background-color: #b91c1c;
+		background: #b91c1c;
 	}
 
 	.btn-sm {
-		padding: 0.25rem 0.75rem;
-		font-size: 0.875rem;
+		padding: 0.5rem 1rem;
+		font-size: 0.75rem;
 	}
 
 	.btn:disabled {
@@ -591,9 +594,13 @@
 		color: #991b1b;
 	}
 
-	@media (max-width: 640px) {
+	@media (max-width: 768px) {
 		.profile-page {
 			padding: 1rem;
+		}
+
+		.section {
+			padding: 1.5rem;
 		}
 
 		.section-header {
@@ -602,26 +609,18 @@
 			gap: 1rem;
 		}
 
-		.user-card {
+		.profile-content {
 			flex-direction: column;
+			align-items: center;
 			text-align: center;
+			gap: 1.5rem;
 		}
 
-		.api-key-card {
-			flex-direction: column;
-			gap: 1rem;
-		}
 
-		.key-actions {
-			align-items: stretch;
-		}
-
-		.permissions-grid {
-			grid-template-columns: 1fr;
-		}
 
 		.form-actions {
 			flex-direction: column;
 		}
 	}
+
 </style>

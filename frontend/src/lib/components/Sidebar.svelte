@@ -3,9 +3,7 @@
 	
 	const navItems = [
 		{ href: '/', label: 'Home', icon: '🏠' },
-		{ href: '/reminders', label: 'Reminders', icon: '📝' },
-		{ href: '/profile', label: 'Profile', icon: '👤' },
-		{ href: '/settings', label: 'Settings', icon: '⚙️' }
+		{ href: '/reminders', label: 'Reminders', icon: '📝' }
 	];
 </script>
 

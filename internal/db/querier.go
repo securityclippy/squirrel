@@ -10,6 +10,7 @@ import (
 
 type Querier interface {
 	AcknowledgeReminder(ctx context.Context, id int32) error
+	CompleteReminder(ctx context.Context, arg CompleteReminderParams) error
 	CreateReminder(ctx context.Context, arg CreateReminderParams) (Reminder, error)
 	DeleteReminder(ctx context.Context, id int32) error
 	GetActiveReminders(ctx context.Context) ([]Reminder, error)
@@ -19,8 +20,14 @@ type Querier interface {
 	GetRemindersByUser(ctx context.Context, userID int32) ([]Reminder, error)
 	GetRemindersDueForDelivery(ctx context.Context) ([]Reminder, error)
 	GetUnacknowledgedPersistentReminders(ctx context.Context) ([]Reminder, error)
+	GetUserCategoryStats(ctx context.Context, userID int32) ([]GetUserCategoryStatsRow, error)
+	GetUserMonthlyStats(ctx context.Context, userID int32) (GetUserMonthlyStatsRow, error)
+	GetUserOverviewStats(ctx context.Context, userID int32) (GetUserOverviewStatsRow, error)
+	GetUserStatistics(ctx context.Context, userID int32) (ReminderStatistic, error)
+	GetUserWeeklyStats(ctx context.Context, userID int32) (GetUserWeeklyStatsRow, error)
 	UpdateLastRemindedAt(ctx context.Context, id int32) error
 	UpdateReminder(ctx context.Context, arg UpdateReminderParams) (Reminder, error)
+	UpdateReminderCategory(ctx context.Context, arg UpdateReminderCategoryParams) error
 	UpdateReminderStatus(ctx context.Context, arg UpdateReminderStatusParams) error
 }
 

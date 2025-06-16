@@ -23,6 +23,25 @@ func (q *Queries) AcknowledgeReminder(ctx context.Context, id int32) error {
 	return err
 }
 
+const completeReminder = `-- name: CompleteReminder :exec
+UPDATE reminders SET 
+    status = 'completed',
+    completed_at = NOW(),
+    completion_note = $2,
+    updated_at = NOW()
+WHERE id = $1
+`
+
+type CompleteReminderParams struct {
+	ID             int32       `json:"id"`
+	CompletionNote pgtype.Text `json:"completion_note"`
+}
+
+func (q *Queries) CompleteReminder(ctx context.Context, arg CompleteReminderParams) error {
+	_, err := q.db.Exec(ctx, completeReminder, arg.ID, arg.CompletionNote)
+	return err
+}
+
 const createReminder = `-- name: CreateReminder :one
 INSERT INTO reminders (
     user_id, title, description, scheduled_at, reminder_type, 
@@ -31,7 +50,7 @@ INSERT INTO reminders (
     is_persistent, reminder_interval_minutes
 ) VALUES (
     $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14
-) RETURNING id, title, description, scheduled_at, delivery_method, delivery_address, status, created_at, updated_at, reminder_type, notification_channels, scheduled_time, scheduled_days_of_week, delivery_window_minutes, is_active, is_persistent, acknowledged_at, reminder_interval_minutes, last_reminded_at, user_id
+) RETURNING id, title, description, scheduled_at, delivery_method, delivery_address, status, created_at, updated_at, reminder_type, notification_channels, scheduled_time, scheduled_days_of_week, delivery_window_minutes, is_active, is_persistent, acknowledged_at, reminder_interval_minutes, last_reminded_at, user_id, category, completed_at, completion_note
 `
 
 type CreateReminderParams struct {
@@ -90,6 +109,9 @@ func (q *Queries) CreateReminder(ctx context.Context, arg CreateReminderParams) 
 		&i.ReminderIntervalMinutes,
 		&i.LastRemindedAt,
 		&i.UserID,
+		&i.Category,
+		&i.CompletedAt,
+		&i.CompletionNote,
 	)
 	return i, err
 }
@@ -107,7 +129,7 @@ func (q *Queries) DeleteReminder(ctx context.Context, id int32) error {
 }
 
 const getActiveReminders = `-- name: GetActiveReminders :many
-SELECT id, title, description, scheduled_at, delivery_method, delivery_address, status, created_at, updated_at, reminder_type, notification_channels, scheduled_time, scheduled_days_of_week, delivery_window_minutes, is_active, is_persistent, acknowledged_at, reminder_interval_minutes, last_reminded_at, user_id FROM reminders 
+SELECT id, title, description, scheduled_at, delivery_method, delivery_address, status, created_at, updated_at, reminder_type, notification_channels, scheduled_time, scheduled_days_of_week, delivery_window_minutes, is_active, is_persistent, acknowledged_at, reminder_interval_minutes, last_reminded_at, user_id, category, completed_at, completion_note FROM reminders 
 WHERE is_active = true AND status = 'pending'
 ORDER BY scheduled_at ASC
 `
@@ -142,6 +164,9 @@ func (q *Queries) GetActiveReminders(ctx context.Context) ([]Reminder, error) {
 			&i.ReminderIntervalMinutes,
 			&i.LastRemindedAt,
 			&i.UserID,
+			&i.Category,
+			&i.CompletedAt,
+			&i.CompletionNote,
 		); err != nil {
 			return nil, err
 		}
@@ -154,7 +179,7 @@ func (q *Queries) GetActiveReminders(ctx context.Context) ([]Reminder, error) {
 }
 
 const getPendingRecurringReminders = `-- name: GetPendingRecurringReminders :many
-SELECT id, title, description, scheduled_at, delivery_method, delivery_address, status, created_at, updated_at, reminder_type, notification_channels, scheduled_time, scheduled_days_of_week, delivery_window_minutes, is_active, is_persistent, acknowledged_at, reminder_interval_minutes, last_reminded_at, user_id FROM reminders 
+SELECT id, title, description, scheduled_at, delivery_method, delivery_address, status, created_at, updated_at, reminder_type, notification_channels, scheduled_time, scheduled_days_of_week, delivery_window_minutes, is_active, is_persistent, acknowledged_at, reminder_interval_minutes, last_reminded_at, user_id, category, completed_at, completion_note FROM reminders 
 WHERE reminder_type = 'recurring'
   AND is_active = true
   AND status = 'pending'
@@ -195,6 +220,9 @@ func (q *Queries) GetPendingRecurringReminders(ctx context.Context) ([]Reminder,
 			&i.ReminderIntervalMinutes,
 			&i.LastRemindedAt,
 			&i.UserID,
+			&i.Category,
+			&i.CompletedAt,
+			&i.CompletionNote,
 		); err != nil {
 			return nil, err
 		}
@@ -207,7 +235,7 @@ func (q *Queries) GetPendingRecurringReminders(ctx context.Context) ([]Reminder,
 }
 
 const getRecurringReminders = `-- name: GetRecurringReminders :many
-SELECT id, title, description, scheduled_at, delivery_method, delivery_address, status, created_at, updated_at, reminder_type, notification_channels, scheduled_time, scheduled_days_of_week, delivery_window_minutes, is_active, is_persistent, acknowledged_at, reminder_interval_minutes, last_reminded_at, user_id FROM reminders 
+SELECT id, title, description, scheduled_at, delivery_method, delivery_address, status, created_at, updated_at, reminder_type, notification_channels, scheduled_time, scheduled_days_of_week, delivery_window_minutes, is_active, is_persistent, acknowledged_at, reminder_interval_minutes, last_reminded_at, user_id, category, completed_at, completion_note FROM reminders 
 WHERE reminder_type IN ('persistent', 'recurring')
   AND is_active = true
   AND (
@@ -246,6 +274,9 @@ func (q *Queries) GetRecurringReminders(ctx context.Context) ([]Reminder, error)
 			&i.ReminderIntervalMinutes,
 			&i.LastRemindedAt,
 			&i.UserID,
+			&i.Category,
+			&i.CompletedAt,
+			&i.CompletionNote,
 		); err != nil {
 			return nil, err
 		}
@@ -258,7 +289,7 @@ func (q *Queries) GetRecurringReminders(ctx context.Context) ([]Reminder, error)
 }
 
 const getReminder = `-- name: GetReminder :one
-SELECT id, title, description, scheduled_at, delivery_method, delivery_address, status, created_at, updated_at, reminder_type, notification_channels, scheduled_time, scheduled_days_of_week, delivery_window_minutes, is_active, is_persistent, acknowledged_at, reminder_interval_minutes, last_reminded_at, user_id FROM reminders WHERE id = $1
+SELECT id, title, description, scheduled_at, delivery_method, delivery_address, status, created_at, updated_at, reminder_type, notification_channels, scheduled_time, scheduled_days_of_week, delivery_window_minutes, is_active, is_persistent, acknowledged_at, reminder_interval_minutes, last_reminded_at, user_id, category, completed_at, completion_note FROM reminders WHERE id = $1
 `
 
 func (q *Queries) GetReminder(ctx context.Context, id int32) (Reminder, error) {
@@ -285,12 +316,15 @@ func (q *Queries) GetReminder(ctx context.Context, id int32) (Reminder, error) {
 		&i.ReminderIntervalMinutes,
 		&i.LastRemindedAt,
 		&i.UserID,
+		&i.Category,
+		&i.CompletedAt,
+		&i.CompletionNote,
 	)
 	return i, err
 }
 
 const getRemindersByUser = `-- name: GetRemindersByUser :many
-SELECT id, title, description, scheduled_at, delivery_method, delivery_address, status, created_at, updated_at, reminder_type, notification_channels, scheduled_time, scheduled_days_of_week, delivery_window_minutes, is_active, is_persistent, acknowledged_at, reminder_interval_minutes, last_reminded_at, user_id FROM reminders 
+SELECT id, title, description, scheduled_at, delivery_method, delivery_address, status, created_at, updated_at, reminder_type, notification_channels, scheduled_time, scheduled_days_of_week, delivery_window_minutes, is_active, is_persistent, acknowledged_at, reminder_interval_minutes, last_reminded_at, user_id, category, completed_at, completion_note FROM reminders 
 WHERE user_id = $1 AND is_active = true 
 ORDER BY scheduled_at ASC
 `
@@ -325,6 +359,9 @@ func (q *Queries) GetRemindersByUser(ctx context.Context, userID int32) ([]Remin
 			&i.ReminderIntervalMinutes,
 			&i.LastRemindedAt,
 			&i.UserID,
+			&i.Category,
+			&i.CompletedAt,
+			&i.CompletionNote,
 		); err != nil {
 			return nil, err
 		}
@@ -337,7 +374,7 @@ func (q *Queries) GetRemindersByUser(ctx context.Context, userID int32) ([]Remin
 }
 
 const getRemindersDueForDelivery = `-- name: GetRemindersDueForDelivery :many
-SELECT id, title, description, scheduled_at, delivery_method, delivery_address, status, created_at, updated_at, reminder_type, notification_channels, scheduled_time, scheduled_days_of_week, delivery_window_minutes, is_active, is_persistent, acknowledged_at, reminder_interval_minutes, last_reminded_at, user_id FROM reminders 
+SELECT id, title, description, scheduled_at, delivery_method, delivery_address, status, created_at, updated_at, reminder_type, notification_channels, scheduled_time, scheduled_days_of_week, delivery_window_minutes, is_active, is_persistent, acknowledged_at, reminder_interval_minutes, last_reminded_at, user_id, category, completed_at, completion_note FROM reminders 
 WHERE is_active = true 
   AND status = 'pending'
   AND scheduled_at <= NOW() + INTERVAL '1 minute' * delivery_window_minutes
@@ -374,6 +411,9 @@ func (q *Queries) GetRemindersDueForDelivery(ctx context.Context) ([]Reminder, e
 			&i.ReminderIntervalMinutes,
 			&i.LastRemindedAt,
 			&i.UserID,
+			&i.Category,
+			&i.CompletedAt,
+			&i.CompletionNote,
 		); err != nil {
 			return nil, err
 		}
@@ -386,7 +426,7 @@ func (q *Queries) GetRemindersDueForDelivery(ctx context.Context) ([]Reminder, e
 }
 
 const getUnacknowledgedPersistentReminders = `-- name: GetUnacknowledgedPersistentReminders :many
-SELECT id, title, description, scheduled_at, delivery_method, delivery_address, status, created_at, updated_at, reminder_type, notification_channels, scheduled_time, scheduled_days_of_week, delivery_window_minutes, is_active, is_persistent, acknowledged_at, reminder_interval_minutes, last_reminded_at, user_id FROM reminders 
+SELECT id, title, description, scheduled_at, delivery_method, delivery_address, status, created_at, updated_at, reminder_type, notification_channels, scheduled_time, scheduled_days_of_week, delivery_window_minutes, is_active, is_persistent, acknowledged_at, reminder_interval_minutes, last_reminded_at, user_id, category, completed_at, completion_note FROM reminders 
 WHERE is_persistent = true 
   AND is_active = true
   AND acknowledged_at IS NULL
@@ -426,6 +466,9 @@ func (q *Queries) GetUnacknowledgedPersistentReminders(ctx context.Context) ([]R
 			&i.ReminderIntervalMinutes,
 			&i.LastRemindedAt,
 			&i.UserID,
+			&i.Category,
+			&i.CompletedAt,
+			&i.CompletionNote,
 		); err != nil {
 			return nil, err
 		}
@@ -435,6 +478,135 @@ func (q *Queries) GetUnacknowledgedPersistentReminders(ctx context.Context) ([]R
 		return nil, err
 	}
 	return items, nil
+}
+
+const getUserCategoryStats = `-- name: GetUserCategoryStats :many
+SELECT 
+    category,
+    COUNT(*) as count,
+    ROUND(COUNT(*) * 100.0 / SUM(COUNT(*)) OVER (), 0) as percentage
+FROM reminders 
+WHERE user_id = $1
+GROUP BY category
+ORDER BY count DESC
+`
+
+type GetUserCategoryStatsRow struct {
+	Category   string         `json:"category"`
+	Count      int64          `json:"count"`
+	Percentage pgtype.Numeric `json:"percentage"`
+}
+
+func (q *Queries) GetUserCategoryStats(ctx context.Context, userID int32) ([]GetUserCategoryStatsRow, error) {
+	rows, err := q.db.Query(ctx, getUserCategoryStats, userID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []GetUserCategoryStatsRow{}
+	for rows.Next() {
+		var i GetUserCategoryStatsRow
+		if err := rows.Scan(&i.Category, &i.Count, &i.Percentage); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const getUserMonthlyStats = `-- name: GetUserMonthlyStats :one
+SELECT 
+    COUNT(CASE WHEN created_at >= CURRENT_DATE - INTERVAL '1 month' THEN 1 END) as this_month,
+    COUNT(CASE WHEN created_at >= CURRENT_DATE - INTERVAL '2 months' AND created_at < CURRENT_DATE - INTERVAL '1 month' THEN 1 END) as last_month
+FROM reminders 
+WHERE user_id = $1
+`
+
+type GetUserMonthlyStatsRow struct {
+	ThisMonth int64 `json:"this_month"`
+	LastMonth int64 `json:"last_month"`
+}
+
+func (q *Queries) GetUserMonthlyStats(ctx context.Context, userID int32) (GetUserMonthlyStatsRow, error) {
+	row := q.db.QueryRow(ctx, getUserMonthlyStats, userID)
+	var i GetUserMonthlyStatsRow
+	err := row.Scan(&i.ThisMonth, &i.LastMonth)
+	return i, err
+}
+
+const getUserOverviewStats = `-- name: GetUserOverviewStats :one
+SELECT 
+    COUNT(*) as total_reminders,
+    COUNT(CASE WHEN status = 'completed' THEN 1 END) as completed_reminders,
+    COUNT(CASE WHEN status NOT IN ('completed', 'cancelled', 'failed') THEN 1 END) as active_reminders,
+    MIN(created_at) as member_since
+FROM reminders 
+WHERE user_id = $1
+`
+
+type GetUserOverviewStatsRow struct {
+	TotalReminders     int64       `json:"total_reminders"`
+	CompletedReminders int64       `json:"completed_reminders"`
+	ActiveReminders    int64       `json:"active_reminders"`
+	MemberSince        interface{} `json:"member_since"`
+}
+
+func (q *Queries) GetUserOverviewStats(ctx context.Context, userID int32) (GetUserOverviewStatsRow, error) {
+	row := q.db.QueryRow(ctx, getUserOverviewStats, userID)
+	var i GetUserOverviewStatsRow
+	err := row.Scan(
+		&i.TotalReminders,
+		&i.CompletedReminders,
+		&i.ActiveReminders,
+		&i.MemberSince,
+	)
+	return i, err
+}
+
+const getUserStatistics = `-- name: GetUserStatistics :one
+SELECT user_id, total_reminders, completed_reminders, active_reminders, this_week_count, last_week_count, this_month_count, last_month_count, weekly_change_percent, monthly_change_percent, category_breakdown FROM reminder_statistics WHERE user_id = $1
+`
+
+func (q *Queries) GetUserStatistics(ctx context.Context, userID int32) (ReminderStatistic, error) {
+	row := q.db.QueryRow(ctx, getUserStatistics, userID)
+	var i ReminderStatistic
+	err := row.Scan(
+		&i.UserID,
+		&i.TotalReminders,
+		&i.CompletedReminders,
+		&i.ActiveReminders,
+		&i.ThisWeekCount,
+		&i.LastWeekCount,
+		&i.ThisMonthCount,
+		&i.LastMonthCount,
+		&i.WeeklyChangePercent,
+		&i.MonthlyChangePercent,
+		&i.CategoryBreakdown,
+	)
+	return i, err
+}
+
+const getUserWeeklyStats = `-- name: GetUserWeeklyStats :one
+SELECT 
+    COUNT(CASE WHEN created_at >= CURRENT_DATE - INTERVAL '7 days' THEN 1 END) as this_week,
+    COUNT(CASE WHEN created_at >= CURRENT_DATE - INTERVAL '14 days' AND created_at < CURRENT_DATE - INTERVAL '7 days' THEN 1 END) as last_week
+FROM reminders 
+WHERE user_id = $1
+`
+
+type GetUserWeeklyStatsRow struct {
+	ThisWeek int64 `json:"this_week"`
+	LastWeek int64 `json:"last_week"`
+}
+
+func (q *Queries) GetUserWeeklyStats(ctx context.Context, userID int32) (GetUserWeeklyStatsRow, error) {
+	row := q.db.QueryRow(ctx, getUserWeeklyStats, userID)
+	var i GetUserWeeklyStatsRow
+	err := row.Scan(&i.ThisWeek, &i.LastWeek)
+	return i, err
 }
 
 const updateLastRemindedAt = `-- name: UpdateLastRemindedAt :exec
@@ -465,7 +637,7 @@ UPDATE reminders SET
     is_persistent = COALESCE($13, is_persistent),
     reminder_interval_minutes = COALESCE($14, reminder_interval_minutes),
     updated_at = NOW()
-WHERE id = $1 RETURNING id, title, description, scheduled_at, delivery_method, delivery_address, status, created_at, updated_at, reminder_type, notification_channels, scheduled_time, scheduled_days_of_week, delivery_window_minutes, is_active, is_persistent, acknowledged_at, reminder_interval_minutes, last_reminded_at, user_id
+WHERE id = $1 RETURNING id, title, description, scheduled_at, delivery_method, delivery_address, status, created_at, updated_at, reminder_type, notification_channels, scheduled_time, scheduled_days_of_week, delivery_window_minutes, is_active, is_persistent, acknowledged_at, reminder_interval_minutes, last_reminded_at, user_id, category, completed_at, completion_note
 `
 
 type UpdateReminderParams struct {
@@ -524,8 +696,28 @@ func (q *Queries) UpdateReminder(ctx context.Context, arg UpdateReminderParams) 
 		&i.ReminderIntervalMinutes,
 		&i.LastRemindedAt,
 		&i.UserID,
+		&i.Category,
+		&i.CompletedAt,
+		&i.CompletionNote,
 	)
 	return i, err
+}
+
+const updateReminderCategory = `-- name: UpdateReminderCategory :exec
+UPDATE reminders SET 
+    category = $2,
+    updated_at = NOW()
+WHERE id = $1
+`
+
+type UpdateReminderCategoryParams struct {
+	ID       int32  `json:"id"`
+	Category string `json:"category"`
+}
+
+func (q *Queries) UpdateReminderCategory(ctx context.Context, arg UpdateReminderCategoryParams) error {
+	_, err := q.db.Exec(ctx, updateReminderCategory, arg.ID, arg.Category)
+	return err
 }
 
 const updateReminderStatus = `-- name: UpdateReminderStatus :exec

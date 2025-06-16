@@ -54,6 +54,38 @@ export interface UpdateReminderRequest {
 	is_active?: boolean;
 }
 
+export interface OverviewStats {
+	total_reminders: number;
+	completed_reminders: number;
+	active_reminders: number;
+	member_since: string;
+}
+
+export interface WeeklyStats {
+	this_week: number;
+	last_week: number;
+	change_percent: number;
+}
+
+export interface MonthlyStats {
+	this_month: number;
+	last_month: number;
+	change_percent: number;
+}
+
+export interface CategoryStat {
+	name: string;
+	count: number;
+	percentage: number;
+}
+
+export interface UserStatistics {
+	overview: OverviewStats;
+	weekly: WeeklyStats;
+	monthly: MonthlyStats;
+	categories: CategoryStat[];
+}
+
 class ServerApiError extends Error {
 	constructor(message: string, public status: number, public body?: any) {
 		super(message);
@@ -145,6 +177,44 @@ export const serverApi = {
 		console.log('Server API: Deleting reminder', id);
 		const response = await fetch(`${SERVER_API_BASE}/reminders/${id}`, {
 			method: 'DELETE',
+		});
+		return handleServerResponse(response);
+	},
+
+	async getUserStatistics(userID?: number): Promise<UserStatistics> {
+		const url = userID 
+			? `${SERVER_API_BASE}/statistics?user_id=${userID}`
+			: `${SERVER_API_BASE}/statistics`;
+		
+		console.log('Server API: Fetching user statistics from', url);
+		const response = await fetch(url, {
+			headers: {
+				'Content-Type': 'application/json',
+			}
+		});
+		return handleServerResponse(response);
+	},
+
+	async completeReminder(id: number, note?: string): Promise<{ success: boolean; message: string }> {
+		console.log('Server API: Completing reminder', id, 'with note:', note);
+		const response = await fetch(`${SERVER_API_BASE}/statistics/complete/${id}`, {
+			method: 'POST',
+			headers: {
+				'Content-Type': 'application/json',
+			},
+			body: JSON.stringify({ note: note || '' }),
+		});
+		return handleServerResponse(response);
+	},
+
+	async updateReminderCategory(id: number, category: string): Promise<{ success: boolean; message: string }> {
+		console.log('Server API: Updating reminder category', id, 'to', category);
+		const response = await fetch(`${SERVER_API_BASE}/statistics/category/${id}`, {
+			method: 'PUT',
+			headers: {
+				'Content-Type': 'application/json',
+			},
+			body: JSON.stringify({ category }),
 		});
 		return handleServerResponse(response);
 	},

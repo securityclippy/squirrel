@@ -48,8 +48,10 @@ func runServer(cmd *cobra.Command, args []string) {
 	defer pool.Close()
 
 	// Initialize services
+	queries := db.New(pool)
 	reminderService := services.NewReminderService(pool)
 	userService := services.NewUserService(pool)
+	statisticsService := services.NewStatisticsService(queries)
 
 	// Initialize middleware
 	authMiddleware := middleware.NewAuthMiddleware(userService)
@@ -57,6 +59,7 @@ func runServer(cmd *cobra.Command, args []string) {
 	// Initialize handlers
 	reminderHandler := handlers.NewReminderHandler(reminderService)
 	userHandler := handlers.NewUserHandler(userService)
+	statisticsHandler := handlers.NewStatisticsHandler(statisticsService)
 
 	// Setup router
 	router := mux.NewRouter()
@@ -94,6 +97,7 @@ func runServer(cmd *cobra.Command, args []string) {
 	// Register routes
 	reminderHandler.RegisterRoutes(router, authMiddleware)
 	userHandler.RegisterRoutes(router, authMiddleware)
+	statisticsHandler.RegisterRoutes(router, authMiddleware)
 
 	// Use environment variable if port flag not explicitly set
 	if !cmd.Flags().Changed("port") {

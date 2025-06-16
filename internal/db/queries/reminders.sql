@@ -99,3 +99,53 @@ WHERE reminder_type = 'recurring'
     scheduled_days_of_week IS NULL
     OR EXTRACT(DOW FROM NOW()) = ANY(scheduled_days_of_week)
   );
+
+-- name: GetUserStatistics :one
+SELECT * FROM reminder_statistics WHERE user_id = $1;
+
+-- name: GetUserOverviewStats :one
+SELECT 
+    COUNT(*) as total_reminders,
+    COUNT(CASE WHEN status = 'completed' THEN 1 END) as completed_reminders,
+    COUNT(CASE WHEN status NOT IN ('completed', 'cancelled', 'failed') THEN 1 END) as active_reminders,
+    MIN(created_at) as member_since
+FROM reminders 
+WHERE user_id = $1;
+
+-- name: GetUserWeeklyStats :one
+SELECT 
+    COUNT(CASE WHEN created_at >= CURRENT_DATE - INTERVAL '7 days' THEN 1 END) as this_week,
+    COUNT(CASE WHEN created_at >= CURRENT_DATE - INTERVAL '14 days' AND created_at < CURRENT_DATE - INTERVAL '7 days' THEN 1 END) as last_week
+FROM reminders 
+WHERE user_id = $1;
+
+-- name: GetUserMonthlyStats :one
+SELECT 
+    COUNT(CASE WHEN created_at >= CURRENT_DATE - INTERVAL '1 month' THEN 1 END) as this_month,
+    COUNT(CASE WHEN created_at >= CURRENT_DATE - INTERVAL '2 months' AND created_at < CURRENT_DATE - INTERVAL '1 month' THEN 1 END) as last_month
+FROM reminders 
+WHERE user_id = $1;
+
+-- name: GetUserCategoryStats :many
+SELECT 
+    category,
+    COUNT(*) as count,
+    ROUND(COUNT(*) * 100.0 / SUM(COUNT(*)) OVER (), 0) as percentage
+FROM reminders 
+WHERE user_id = $1
+GROUP BY category
+ORDER BY count DESC;
+
+-- name: CompleteReminder :exec
+UPDATE reminders SET 
+    status = 'completed',
+    completed_at = NOW(),
+    completion_note = $2,
+    updated_at = NOW()
+WHERE id = $1;
+
+-- name: UpdateReminderCategory :exec
+UPDATE reminders SET 
+    category = $2,
+    updated_at = NOW()
+WHERE id = $1;

@@ -51,6 +51,23 @@ type Reminder struct {
 	ReminderIntervalMinutes pgtype.Int4        `json:"reminder_interval_minutes"`
 	LastRemindedAt          pgtype.Timestamptz `json:"last_reminded_at"`
 	UserID                  int32              `json:"user_id"`
+	Category                string             `json:"category"`
+	CompletedAt             pgtype.Timestamptz `json:"completed_at"`
+	CompletionNote          pgtype.Text        `json:"completion_note"`
+}
+
+type ReminderStatistic struct {
+	UserID               int32       `json:"user_id"`
+	TotalReminders       int64       `json:"total_reminders"`
+	CompletedReminders   int64       `json:"completed_reminders"`
+	ActiveReminders      int64       `json:"active_reminders"`
+	ThisWeekCount        int64       `json:"this_week_count"`
+	LastWeekCount        int64       `json:"last_week_count"`
+	ThisMonthCount       int64       `json:"this_month_count"`
+	LastMonthCount       int64       `json:"last_month_count"`
+	WeeklyChangePercent  interface{} `json:"weekly_change_percent"`
+	MonthlyChangePercent interface{} `json:"monthly_change_percent"`
+	CategoryBreakdown    []byte      `json:"category_breakdown"`
 }
 
 type User struct {
